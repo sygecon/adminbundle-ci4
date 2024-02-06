@@ -1,7 +1,7 @@
 {
 	"name": "sygecon/adminbundle-ci4",
 	"type": "project",
-	"description": "Administrative bundle for website management based on the CodeIgniter 4 framework",
+	"description": "Administration bundle for website management based on the CodeIgniter 4 framework",
 	"homepage": "https://github.com/sygecon/adminbundle-ci4",
 	"license": "MIT",
 	"require": {

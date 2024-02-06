@@ -1,4 +1,4 @@
-# Development Admin Bundle on the CodeIgniter 4 framework
+# CodeIgniter 4 development Admin bundle
 
 <p align="center">
 Free administration bundle for website management based on the CodeIgniter 4 framework.
