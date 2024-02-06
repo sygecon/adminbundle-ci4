@@ -1,7 +1,7 @@
-# adminbundle-ci4 Development
+# Development Admin Bundle on the CodeIgniter 4 framework
 
 <p align="center">
-Free administrative package for website management based on the CodeIgniter 4 framework..
+Free administration bundle for website management based on the CodeIgniter 4 framework.
 <br>
 Based on <a href="https://github.com/sygecon/adminbundle-ci4">Sygecon admin bundle</a> library.
 </p>
