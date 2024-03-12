@@ -12,6 +12,7 @@ use Throwable;
 // # php spark make:import about build
 // after
 // # php spark make:import about
+
 class Import extends BaseCommand
 {
     protected $group        = 'Generators';
@@ -43,6 +44,9 @@ class Import extends BaseCommand
         }
     }
 
+    /**
+     * 
+     */
     private function parsing(string $name): string
     {
         try {
