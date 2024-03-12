@@ -1,37 +1,40 @@
 <?php
 
 // Создание папки если её нет  -------------------------------------------
-if (!function_exists('createPath')) {
-    function createPath(string $dir = ''): bool 
+if (! function_exists('createPath')) {
+    function createPath(string $path): bool 
     {
-        $dir = castingPath($dir);
-        if (is_dir($dir)) { return true; }
+        $dir = castingPath($path);
+        if (is_dir($dir) === true) return true;
         return mkdir($dir, 0755, true);
     }
 }
 
 // Создание файла  -------------------------------------------
-if (!function_exists('createFile')) {
-    function createFile(string $fileName = '', string $data = ' '): bool 
+if (! function_exists('createFile')) {
+    function createFile(string $fileName, string $data): bool 
     {
-        $fileName = castingPath($fileName);
-        if ($fileName && mb_substr($fileName, 0, 1) !== '.') {
-            if (file_put_contents($fileName, $data, LOCK_EX) !== false) { return true; }
+        $fname  = checkFileName(basename($fileName));
+        $dir    = castingPath(dirname($fileName));
+        if (! $fname || $fname[0] === '.' || $fname === $dir) return false;
+        if (is_dir($dir) === false) { 
+            if (mkdir($dir, 0755, true) === false) return false;
         }
-        return false;
+        $r = file_put_contents($dir . DIRECTORY_SEPARATOR . $fname, trim($data) . PHP_EOL, LOCK_EX);
+        return ($r === false ? false : true);
     }
 }
 
 // Удаление папки с файлами  ------------------------------------------- 
-if (!function_exists('deletePath')) {
-    function deletePath(string $dir = '', bool $startDelete = true): bool 
+if (! function_exists('deletePath')) {
+    function deletePath(string $path = '', bool $startDelete = true): bool 
     {
-        $dir = castingPath($dir);
-        if (is_file($dir)) { 
-            if ($startDelete === true) { return unlink($dir); }
+        $dir = castingPath($path);
+        if (is_file($dir) === true) { 
+            if ($startDelete === true) { return @unlink($dir); }
             return false;
         }
-        if (! is_dir($dir)) { return false; }
+        if (is_dir($dir) === false) { return false; }
         $folders = [];
 
         foreach (new \RecursiveIteratorIterator(
@@ -43,81 +46,77 @@ if (!function_exists('deletePath')) {
                 $folders[] = $fileInfo->getRealPath();
                 continue;
             }
-            unlink($fileInfo->getRealPath());
+            @unlink($fileInfo->getRealPath());
         }
 
         if ($folders) {
-            usort($folders, 
-                function ($a, $b) { 
-                    $lenA = explode(DIRECTORY_SEPARATOR, $a);
-                    $lenB = explode(DIRECTORY_SEPARATOR, $b);
-                    if ($lenA === $lenB) { return $a < $b; }
-                    return $lenA < $lenB;
-                }
-            );
+            usort($folders, function($a, $b) { 
+                $na = substr_count($a, DIRECTORY_SEPARATOR);
+                $nb = substr_count($b, DIRECTORY_SEPARATOR);
+                if ($na === $nb) return $a < $b;
+                return $na < $nb;
+            });
             foreach($folders as $pathName) { rmdir($pathName); }
         }
         
-        if ($startDelete === true) { return rmdir($dir); }
+        if ($startDelete === true) return rmdir($dir);
         return true;
     }
 }
 
 // Удаление файла  -------------------------------------------
-if (!function_exists('deleteFile')) {
-    function deleteFile(string $file = ''): bool 
+if (! function_exists('deleteFile')) {
+    function deleteFile(string $fileName): bool 
     {
-        $file = castingPath($file);
-        if (is_file($file)) { return unlink($file); }
+        $file = castingPath($fileName);
+        if (file_exists($file) === true) { return @unlink($file); }
         return false;
     }
 }
 
 // Переименование папки или файла  -------------------------------------------
-if (!function_exists('renameFile')) {
-    function renameFile(string $path = '', string $oldName = '', string $newName = '') 
+if (! function_exists('renameFile')) {
+    function renameFile(string $path, string $oldName, string $newName): string 
     {
-        helper('path');
-        $oldName = castingPath($path) . DIRECTORY_SEPARATOR . castingPath($oldName, true);
-        if (! file_exists($oldName)) { return false; }
-        if (! $newName = checkFileName($newName)) { return false; }
-        $resName = $newName;
-        $fileInfo = pathinfo($oldName);
-        $path = $fileInfo['dirname'] . DIRECTORY_SEPARATOR;
-        $fname = $fileInfo['basename'];
-        if (is_file($path . $fname)) {
-            $newName .= '.' . $fileInfo['extension'];
-        } else if (! is_dir($path . $fname)) {
-            return false; 
-        } 
-        if (file_exists($path . $newName)) { return false; }
-        if ($newName === $fname) { return false; }
-        
-        if (rename($path . $fname, $path . $newName)) { return $resName; }
-        return false;
+        if (! $dst = castingPath($newName)) return '';
+        $src = castingPath($path) . DIRECTORY_SEPARATOR . castingPath($oldName, true);
+
+        if (is_file($src) === true) {
+            $dst .= '.' . pathinfo($oldName, PATHINFO_EXTENSION);
+        } else if (is_dir($src) === false) { return ''; } 
+
+        $dst = dirname($src) . DIRECTORY_SEPARATOR . $dst;
+        if ($src === $dst) return '';
+        if (file_exists($dst) === true) return '';
+
+        if (rename($src, $dst) === false) return '';
+        return $newName;
     }
 }
 
-if (!function_exists('copyFile')) {
+// Копировать или переместить файл в указанную папку -------------------------------------------
+if (! function_exists('copyFile')) {
     function copyFile(string $srcFile = '', string $dstPath = '', bool $move = false): bool 
     {
-        $dstPath = castingPath($dstPath);
-        if (! is_dir($dstPath)) return false;
-        if (!is_file($srcFile)) return false;
-        $file = $dstPath . DIRECTORY_SEPARATOR . basename($srcFile);
-        if (is_file($file)) unlink($file);
-        return ($move ? rename($srcFile, $file) : copy($srcFile, $file));
+        $dir = castingPath($dstPath);
+        $src = castingPath($srcFile);
+        if (is_file($src) === false) return false;
+        if (is_dir($dir) === false) { 
+            if (mkdir($dir, 0755, true) === false) return false;
+        }
+        $file = $dir . DIRECTORY_SEPARATOR . basename($src);
+        return ($move ? rename($src, $file) : copy($src, $file));
     }
 }
 
-if (!function_exists('copyPath')) {
-    function copyPath(string $src = '', string $dst = '', bool $move = false): bool
+// Копировать папку -----------------------------------------------------------
+if (! function_exists('copyPath')) {
+    function copyPath(string $srcPath = '', string $dstPath = '', bool $move = false): bool
     {
-        $src = castingPath($src);
-        $dst = castingPath($dst);
-        if (is_dir($src) === false) { return false; }
-        deletePath($dst);
-        if (createPath($dst) === false) { return false; }
+        $src = castingPath($srcPath);
+        $dst = castingPath($dstPath);
+        if (is_dir($src) === false) return false;
+        if (createPath($dst) === false) return false;
 
         try {
             $iterator = new \RecursiveIteratorIterator(
@@ -125,13 +124,11 @@ if (!function_exists('copyPath')) {
                 \RecursiveIteratorIterator::SELF_FIRST
             );
             foreach ($iterator as $file) {
-                $subPath = $iterator->getSubPathName();
+                $dir = $dst . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
                 if ($file->isDir()) {
-                    mkdir($dst . DIRECTORY_SEPARATOR . $subPath);
+                    if (is_dir($dir) === false) mkdir($dir, 0755, true);
                 } else {
-                    $move 
-                    ? rename($file, $dst . DIRECTORY_SEPARATOR . $subPath) 
-                    : copy($file, $dst . DIRECTORY_SEPARATOR . $subPath);
+                    if ($move === true) rename($file, $dir); else copy($file, $dir);
                 }
             }
             return true;
@@ -140,19 +137,19 @@ if (!function_exists('copyPath')) {
 }
 
 // Архивировать папку
-if (!function_exists('pathToZip')) {
-    function pathToZip(string $folderSrc = '', string $folderDst = ''): bool
+if (! function_exists('pathToZip')) {
+    function pathToZip(string $folderSrc, string $folderDst): bool
     {
         $folderSrc = castingPath($folderSrc);
         $folderDst = castingPath($folderDst);
-        if (! is_dir($folderSrc)) { return false; }
-        if (! $folderDst) { return false; }
+        if (! is_dir($folderSrc)) return false;
+        if (! $folderDst) return false;
 
         $dirName = pathInfo($folderSrc, PATHINFO_BASENAME);
         $exclusiveLength = strlen(pathInfo($folderSrc, PATHINFO_DIRNAME));
         $exclusiveLength++;
         if (! is_dir($folderDst)) { 
-            if (! mkdir($folderDst, 0755, true)) { return false; }
+            if (! mkdir($folderDst, 0755, true)) return false;
         }
         
         $zip = new \ZipArchive();
@@ -176,40 +173,8 @@ if (!function_exists('pathToZip')) {
             $zip->close();
             return true;
         } catch (\Throwable $th) {
-            if ($zip) { $zip->close(); }
+            if ($zip) $zip->close();
             return false;
         }
-    }
-}
-
-/*** Функция транслитерации текста */
-if (!function_exists('translatelt')) {
-    function translatelt(string $text = ''): string 
-    {
-        $L['ru'] = [
-            'Ё', 'Ж', 'Ц', 'Ч', 'Щ', 'Ш', 'Ы',
-            'Э', 'Ю', 'Я', 'ё', 'ж', 'ц', 'ч',
-            'ш', 'щ', 'ы', 'э', 'ю', 'я', 'А',
-            'Б', 'В', 'Г', 'Д', 'Е', 'З', 'И',
-            'Й', 'К', 'Л', 'М', 'Н', 'О', 'П',
-            'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ъ',
-            'Ь', 'а', 'б', 'в', 'г', 'д', 'е',
-            'з', 'и', 'й', 'к', 'л', 'м', 'н',
-            'о', 'п', 'р', 'с', 'т', 'у', 'ф',
-            'х', 'ъ', 'ь'
-        ];
-        $L['en'] = [
-            'YO', 'ZH',  'CZ', 'CH', 'SHH', 'SH', 'Y',
-            'E', 'YU',  'YA', 'yo', 'zh', 'cz', 'ch',
-            'sh', 'shh', 'y', 'e', 'yu', 'ya', 'A',
-            'B', 'V',  'G',  'D',  'E',  'Z',  'I',
-            'Y',  'K',   'L',  'M',  'N',  'O',  'P',
-            'R',  'S',   'T',  'U',  'F',  'X',  '',
-            '',  'a',   'b',  'v',  'g',  'd',  'e',
-            'z',  'i',   'y',  'k',  'l',  'm',  'n',
-            'o',  'p',   'r',  's',  't',  'u',  'f',
-            'x',  '',  ''
-        ];
-        return str_replace($L['ru'], $L['en'], $text);
     }
 }

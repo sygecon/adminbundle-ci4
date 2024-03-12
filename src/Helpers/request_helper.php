@@ -2,40 +2,31 @@
 
 /// Декодирование строки Base64  ------------------------------------------
 if (! function_exists('decodeTextBase64')) {
-	function decodeTextBase64(string $data = ''): string
+	function decodeTextBase64(string $text): string
 	{
-		if (isset($data) && $data) {
-			$pos = mb_strpos($data, 'base64,');
-			if ($pos !== false) {
-				$pos = $pos + 7;
-				$data = mb_strcut($data, $pos, mb_strlen($data)); 
-			}
-			unset($pos);
-			$data = base64_decode(trim($data));
+		if (! $text = trim($text)) return '';
+		$pos = mb_strpos($text, 'base64,');
+		if ($pos !== false) {
+			$pos = $pos + 7;
+			$text = mb_strcut($text, $pos, mb_strlen($text)); 
 		}
-		return $data;
+		unset($pos);
+		return base64_decode(trim($text));
 	}
 }
 
-/// Получение данных файла из PUT запроса   -------------------------------------------
+/// Получение данных файла из PUT запроса   --------------------------------
 if (! function_exists('getRequestPut')) {
 	function getRequestPut(): object
 	{
         $response = (object) ['data'=>'', 'name'=>'', 'path'=>'', 'ext'=>''];
-		$request = \Config\Services::request();
-		if ($request) {
-			$buf = $request->getServer('HTTP_X_FILE_NAME');
-			if (isset($buf)) {
-				$response->name = $buf;
-				$response->ext = mb_strtolower(pathinfo($buf)['extension']);
+		if ($request = \Config\Services::request()) {
+			if ($name = $request->getServer('HTTP_X_FILE_NAME')) {
+				$response->name = $name;
+				$response->ext = mb_strtolower(pathinfo($name)['extension']);
 			} 
-			$buf = $request->getServer('HTTP_X_FILE_PATH');
-			if (isset($buf)) $response->path = $buf;
-			$buf = file_get_contents('php://input');
-			if (isset($buf)) {
-				$response->data = decodeTextBase64($buf);
-			}
-			unset($buf);
+			if ($path = $request->getServer('HTTP_X_FILE_PATH')) $response->path = $path;
+			if ($data = file_get_contents('php://input')) $response->data = decodeTextBase64($data);
 		}
 		return $response;
 	}

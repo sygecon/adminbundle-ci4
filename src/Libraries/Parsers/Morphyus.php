@@ -1,14 +1,14 @@
 <?php 
 /**
  *
- * @author  Aspada.ru
- * @license http://www.opensource.org/licenses/bsd-license.php BSD 3-Clause License
+ * @author Panin Aleksei S <https://github.com/sygecon>
+ * @license http://www.opensource.org/licenses/mit-license.html MIT License
  */
 namespace Sygecon\AdminBundle\Libraries\Parsers;
 
 use phpMorphy;
 use Throwable;
-use App\Config\Boot\Morphy;
+use Config\Boot\Morphy;
 
 final class Morphyus 
 {

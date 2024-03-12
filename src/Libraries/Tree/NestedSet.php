@@ -2,7 +2,7 @@
 namespace Sygecon\AdminBundle\Libraries\Tree;
 
 use Sygecon\AdminBundle\Libraries\Tree\NestedTab;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 use stdClass;
 
 final class NestedSet extends NestedTab 

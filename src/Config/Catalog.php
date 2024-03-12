@@ -1,6 +1,6 @@
 <?php namespace Sygecon\AdminBundle\Config;
 
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 use Sygecon\AdminBundle\Libraries\Tree\NestedGet as TreeGet;
 
 final class Catalog

@@ -69,9 +69,8 @@ final class AspFm extends Controller {
         $fileData = ['folders' => [], 'files' => []];
         if ($this->getRequest()) {
             $this->getDir($fileData);
-            if (isset($this->postData['get_filter'])) {
+            if (isset($this->postData['get_filter']))
                 $fileData['filter'] = PageTypes::FILE_FILTER_EXT;
-            }
         }
         return $this->respond(jsonEncode($fileData, false), 200);
     }
@@ -79,8 +78,10 @@ final class AspFm extends Controller {
     public function me_rename(): ResponseInterface 
     {
         if ($this->getRequest()) {
-            if (isset($this->postData['fname']) && isset($this->postData['fname_new']))
-                return $this->respond(renameFile($this->path, $this->postData['fname'], $this->postData['fname_new']), 200);
+            if (isset($this->postData['fname']) && isset($this->postData['fname_new'])) {
+                $result = renameFile($this->path, $this->postData['fname'], $this->postData['fname_new']);
+                return $this->respond(($result ? $result : false), 200);
+            }
         }
         return $this->respond(false, 200);
     }
@@ -131,7 +132,7 @@ final class AspFm extends Controller {
                 $filter = PageTypes::FILE_FILTER_EXT[$this->type];
                 foreach ($this->postData['fname'] as $id => $val) {
                     $fn = castingPath($val, true);
-                    $data = trim(decodeTextBase64($this->postData['fdata'][$id]));
+                    $data = decodeTextBase64($this->postData['fdata'][$id]);
                     if (isset($data) && isset($fn) && $fn && $data) {
                         $fn = $this->path . DIRECTORY_SEPARATOR . $fn;
                         deletePath($fn . '.bak');

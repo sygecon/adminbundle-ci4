@@ -1,6 +1,5 @@
 <?php
 
-
 if (! function_exists('isInteger')) {
     function isInteger($value): bool
     {
@@ -17,36 +16,35 @@ if (! function_exists('isWholeNumber')) {
     }
 }
 
-if (!function_exists('inArray')) {
-    function inArray(string $str = '', array $arr = [], string $key = 'link'): bool
+if (! function_exists('inArray')) {
+    function inArray(string $text = '', array $arr = [], string $key = 'link'): bool
     {
         foreach($arr as &$item) {
-            if (is_array($item)) {
-                if (strcmp($str, $item[$key]) === 0) { return true; }
-            } else {
-                if (strcmp($str, $item) === 0) { return true; }
-            }
+            $res = (is_array($item) === true
+                ? strcmp($text, $item[$key])
+                : strcmp($text, $item)
+            );
+            if ($res === 0) return true;
         }
         return false;
     }
 }
 
-if (!function_exists('contains')) {
-    function contains(string $str = '', array $arr = [], string $key = 'link'): bool
+if (! function_exists('contains')) {
+    function contains(string $text = '', array $arr = [], string $key = 'link'): bool
     {
         foreach($arr as &$item) {
-            if (is_array($item)) {
-                $res = strpos($str, $item[$key]);
-            } else {
-                $res = strpos($str, $item);
-            }
+            $res = (is_array($item) === true
+                ? strpos($text, $item[$key])
+                : strpos($text, $item)
+            );
             if ($res !== false && $res == 0) { return true; }
         }
         return false;
     }
 }
 
-if (!function_exists('subString')) {
+if (! function_exists('subString')) {
 	function subString(string $text, string $find, string $findEnd, int &$offset): string 
     {
         $start = strpos($text, $find, $offset);
@@ -64,25 +62,20 @@ if (!function_exists('subString')) {
     }
 }
 
-if (!function_exists('readParamFromConfig')) {
-    function readParamFromConfig(string $text, string $param): ?string 
+if (! function_exists('findParamInClass')) {
+    function findParamInClass(string $text, string $param): int 
     {
-        if (! $param) { return null; }
-        if (! $pos = mb_strpos($text, ' $' . $param)) { return null; }
-        $pos += strlen($param) + 2;
-        if (! $start = mb_strpos($text, '=', $pos)) { return null; }
-        ++$start;
-        if (! $end = mb_strpos($text, ';', $start)) { return null; }
-
-        return trim(mb_substr($text, $start, ($end - $start)), '=; ');
+        if (! $len = mb_strlen($param)) { return 0; }
+        if ($pos = mb_strpos($text, ' $' . $param)) { return $pos + $len + 2; }
+        if ($pos = mb_strpos($text, ' const ' . $param)) { return $pos + $len + 7; }
+        return 0;
     }
 }
 
-if (!function_exists('writeParamToConfig')) {
-    function writeParamToConfig(string &$text, string $param, string $value): bool 
+if (! function_exists('writeParamToClass')) {
+    function writeParamToClass(string &$text, string $param, string $value): bool 
     {
-        if (! $pos = mb_strpos($text, ' $' . $param)) { return false; }
-        $pos += mb_strlen($param) + 2;
+        if (! $pos = findParamInClass($text, $param)) { return false; }
         if (! $end = mb_strpos($text, ';', $pos)) { return false; }
         
         $text = mb_substr($text, 0, $pos) . ' = ' . $value . mb_substr($text, $end);
@@ -90,83 +83,49 @@ if (!function_exists('writeParamToConfig')) {
     }
 }
 
-if (!function_exists('addMethodToConfig')) {
-    function addParamToConfig(string &$text, string $param): bool 
-    {
-        $ntext = trim($text);
-        if (mb_substr($ntext, -1) === '}') { 
-            $pos = mb_strlen($ntext) - 1; 
-        } else
-        if (! $pos = mb_strrpos($ntext, '}')) { return false; }
-        --$pos;
-
-        $text = mb_substr($ntext, 0, $pos) . "\n\n\t" . $param . ";\n}\n";
-        return true;
-    }
-}
-
-if (!function_exists('addUseClassToConfig')) {
-    function addUseClassToConfig(string $srcText, string &$dstText): bool 
-    {
-        if (! $srcText) { return false; }
-        if (! $dstText) { return false; }
-        if (! $srcPos = mb_strpos($srcText, '{')) { return false; }
-        if (! $dstPos = mb_strpos($dstText, '{')) { return false; }
-        $regex = '/use\s(.*);/ui';
-
-        $text = mb_substr($dstText, 0, $dstPos);
-        if (! $pos = mb_strrpos($text, ';')) { return false; }
-        ++$pos;
-        $text = mb_substr($dstText, 0, $pos);
-        if (! preg_match_all($regex, $text, $dstUse)) { return false; }
-        if (! isset($dstUse[1])) { return false; }
-        $dstUse = $dstUse[1];
-        $text = trim(
-            str_replace(["\r\n\r\n", "\n\n", "\r\r"], ["\r\n", "\n", "\r"], 
-                preg_replace('/use\s(.*);/ui', '', $text)
-            )
-        );
-        if (! $text) { return false; }
-        $useStr = '';
-        $srcUse = [];
-        $dstUse = [];
-
-        if (! preg_match_all($regex, mb_substr($srcText, 0, $srcPos), $srcUse)) { return false; }
-        if (! isset($srcUse[1])) { return false; }
-        $srcUse[0] = [];
-        foreach($srcUse[1] as $value) {
-            $srcUse[0][trim($value, '\\ ')] = 1;
-        }
-        $srcUse = $srcUse[0];
-
-        foreach($dstUse as $value) { 
-            $value = trim($value, '\\ ');
-            $useStr .= "\n" . 'use ' . $value . ';';
-            if (isset($srcUse[$value]) === true) { unset($srcUse[$value]); }
-        }
-        if (! $srcUse) { return false; }
-
-        foreach($srcUse as $key => $value) { 
-            $useStr .= "\n" . 'use ' . $key . ';';
-            unset($srcUse[$key]);
-        }
-        if (! $useStr) { return false; }
-
-        $dstText = $text . "\n" . $useStr . "\n" . mb_substr($dstText, $pos);
-        return true;
-    }
-}
-
 // функция по удалению определенных тегов
-if (!function_exists('stripTags')) {
-    function stripTags($string, $tags) { 
-        //$string - строка с тегами, $tags - удаляемые теги (в строку через запятую)
-        $tags = explode(',', $tags); // разбиваем строку на массив
-        foreach($tags as $tag) { // перебираем теги
-            $regexp = '#</?' . trim($tag) . '( .*?>|>)#Usi'; // регулярное выражение
-            $string = preg_replace($regexp, '', $string); // выполняем поиск в строке
-            
+if (! function_exists('stripTags')) {
+    //$text - строка с тегами, $tags - удаляемые теги (в строку через запятую)
+    function stripTags(string $text, string $tags): string 
+    { 
+        foreach(explode(',', $tags) as $tag) {
+            $regexp = '#</?' . trim($tag) . '( .*?>|>)#Usi';
+            $text = preg_replace($regexp, '', $text);
         }
-        return $string; 
+        return $text; 
+    }
+}
+
+// Функция транслитерации текста 
+if (! function_exists('translateRus')) {
+    function translateRus(string $text): string 
+    {
+        $charMap = [
+            0 => [
+                'Ё', 'Ж', 'Ц', 'Ч', 'Щ', 'Ш', 'Ы',
+                'Э', 'Ю', 'Я', 'ё', 'ж', 'ц', 'ч',
+                'ш', 'щ', 'ы', 'э', 'ю', 'я', 'А',
+                'Б', 'В', 'Г', 'Д', 'Е', 'З', 'И',
+                'Й', 'К', 'Л', 'М', 'Н', 'О', 'П',
+                'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ъ',
+                'Ь', 'а', 'б', 'в', 'г', 'д', 'е',
+                'з', 'и', 'й', 'к', 'л', 'м', 'н',
+                'о', 'п', 'р', 'с', 'т', 'у', 'ф',
+                'х', 'ъ', 'ь'
+            ],
+            1 => [
+                'YO', 'ZH',  'CZ', 'CH', 'SHH', 'SH', 'Y',
+                'E',  'YU',  'YA', 'yo', 'zh',  'cz', 'ch',
+                'sh', 'shh', 'y',  'e',  'yu',  'ya', 'A',
+                'B',  'V',   'G',  'D',  'E',   'Z',  'I',
+                'Y',  'K',   'L',  'M',  'N',   'O',  'P',
+                'R',  'S',   'T',  'U',  'F',   'X',  '',
+                '',   'a',   'b',  'v',  'g',   'd',  'e',
+                'z',  'i',   'y',  'k',  'l',   'm',  'n',
+                'o',  'p',   'r',  's',  't',   'u',  'f',
+                'x',  '',  ''
+            ]
+        ];
+        return str_replace($charMap[0], $charMap[1], $text);
     }
 }

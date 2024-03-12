@@ -3,7 +3,7 @@ namespace Sygecon\AdminBundle\Models\Template;
 
 use App\Models\Boot\BaseModel as Model;
 use Config\Services;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 
 class LayoutModel extends Model
 {

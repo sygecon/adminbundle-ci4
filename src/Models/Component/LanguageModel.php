@@ -2,7 +2,7 @@
 
 use CodeIgniter\Config\Services;
 use App\Models\Boot\BaseModel as Model;
-use Sygecon\AdminBundle\Libraries\ConstantBuilder;
+use Sygecon\AdminBundle\Libraries\СonstantEditor;
 use Sygecon\AdminBundle\Models\Catalog\PagesModel;
 use Throwable;
 
@@ -183,7 +183,7 @@ final class LanguageModel extends Model
         }
         unset($value, $json);
 
-        $constEditor = new ConstantBuilder();
+        $constEditor = new СonstantEditor();
 
         if ($defaultName) {
             if ($defaultName !== $constEditor->get('APP_DEFAULT_LOCALE')) { 
@@ -233,7 +233,7 @@ final class LanguageModel extends Model
             $param = key($value);
             if (! $param) { continue; }
             if (! isset($value[$param])) { continue; }
-            if (writeParamToConfig($text, $param, $value[$param]) === true) {
+            if (writeParamToClass($text, $param, $value[$param]) === true) {
                 $change = true;
             }
             unset($value[$param], $data[$key]);

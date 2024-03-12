@@ -1,6 +1,7 @@
 <?php namespace Sygecon\AdminBundle\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
+use Config\Auth;
 use Sygecon\AdminBundle\Config\UserControl;
 
 /// php spark migrate -all
@@ -42,7 +43,7 @@ class Migration_create_users_data_table extends Migration
 
 	protected function setDBGroup(): void
 	{
-		$config = new \Config\Auth();
+		$config = new Auth();
 		$this->DBGroup = $config->DBGroup;
 	}
 }

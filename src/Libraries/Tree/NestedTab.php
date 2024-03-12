@@ -4,7 +4,7 @@ use Config\Database;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Database\Exceptions\DatabaseException;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 use Sygecon\AdminBundle\Libraries\Seo\SeoModel;
 use Throwable;
 

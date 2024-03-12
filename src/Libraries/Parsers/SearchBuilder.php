@@ -1,16 +1,16 @@
 <?php 
 /**
- * @author  Aspada.ru
- * @license http://www.opensource.org/licenses/bsd-license.php BSD 3-Clause License
+ * @author Panin Aleksei S <https://github.com/sygecon>
+ * @license http://www.opensource.org/licenses/mit-license.html MIT License
  */
 namespace Sygecon\AdminBundle\Libraries\Parsers;
 
 use CodeIgniter\HTTP\CLIRequest;
 use Config\App;
 use Config\Database;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
+use App\Libraries\Loader\WebDoc;
 use Sygecon\AdminBundle\Config\AccessControl;
-use Sygecon\AdminBundle\Libraries\HTML\WebDoc;
 use Sygecon\AdminBundle\Libraries\HTML\DomDoc;
 use Sygecon\AdminBundle\Libraries\Parsers\Morphyus;
 use DateTime;

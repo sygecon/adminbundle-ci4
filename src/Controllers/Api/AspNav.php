@@ -22,7 +22,7 @@ final class AspNav extends AdminController {
         if ($data = cache($csh)) { return $this->respond($data, 200); }
 
         helper('path');
-        if (! $data = meLoader(self::PATH_NAV . $slug . '.json')) { 
+        if (! $data = getDataFromJson(self::PATH_NAV . $slug)) { 
             return $this->fail(lang('Admin.IdNotFound')); 
         }
         // Пересбор

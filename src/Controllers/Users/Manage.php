@@ -6,7 +6,7 @@ use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 use Config\Database;
 use Config\AuthGroups;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 use Sygecon\AdminBundle\Config\UserControl;
 use Sygecon\AdminBundle\Config\Paths;
 use Sygecon\AdminBundle\Controllers\AdminController;

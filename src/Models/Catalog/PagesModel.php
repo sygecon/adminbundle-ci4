@@ -2,7 +2,7 @@
 
 //use CodeIgniter\I18n\Time;
 use App\Models\Boot\BaseModel as Model;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 use Sygecon\AdminBundle\Libraries\Tree\NestedGet as TreeGet;
 use Sygecon\AdminBundle\Libraries\Tree\NestedSet as TreeSet;
 use Sygecon\AdminBundle\Libraries\Tree\NestedMoving as TreeMoving;

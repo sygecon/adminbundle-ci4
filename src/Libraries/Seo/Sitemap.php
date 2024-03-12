@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 /**
- * @author  Aspada.ru
- * @license http://www.opensource.org/licenses/bsd-license.php BSD 3-Clause License
+ * @author Panin Aleksei S <https://github.com/sygecon>
+ * @license http://www.opensource.org/licenses/mit-license.html MIT License
  */
 namespace Sygecon\AdminBundle\Libraries\Seo;
 
 use Config\App;
-use Sygecon\AdminBundle\Libraries\HTML\WebDoc;
+use App\Libraries\Loader\WebDoc;
 
 final class Sitemap 
 {
