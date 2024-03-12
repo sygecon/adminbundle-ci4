@@ -55,12 +55,11 @@ final class Card
     public function setTitle(string $title = '', string $ident = ''): Card 
     {
         foreach ($this->data as &$cardFirst) { $data = &$cardFirst; break; }
-        if (isset($data) === false) { return $this; }
+        if (isset($data) === false) return $this;
 
-        if ($title) { $data['title'] = $title; }
-        if ($ident) {
+        if ($title) $data['title'] = $title; 
+        if ($ident)
             $data['form']['data-prefix'] = ($this->modelName ? $this->modelName . '/' : '') . $ident;
-        }
         return $this;
     }
 
@@ -103,10 +102,10 @@ final class Card
 
     public function show(string $key = ''): string 
     {
-        if (! $this->data) { return ''; }
+        if (! $this->data) return '';
         $html = '';
 
-        if (! $key) { return $this->renderData($this->getForm(), $html); }
+        if (! $key) return $this->renderData($this->getForm(), $html);
 
         if (isset($this->data[$key]) && is_array($this->data[$key])) {
             $html = $this->renderBlock($this->getForm(), $this->data[$key]);
@@ -117,10 +116,10 @@ final class Card
 
     public function showWithHtmlEditors(bool $noEmptyThenCollapsed = true): string 
     {
-        if (! $this->data) { return ''; }
+        if (! $this->data) return '';
         foreach ($this->data as &$cardFirst) { $data = &$cardFirst; break; }
 
-        if (! isset($data['form']['fields'])) { return ''; }
+        if (! isset($data['form']['fields'])) return '';
         $htmlData = [];
         
         foreach ($data['form']['fields'] as $key => &$value) { 
@@ -129,7 +128,7 @@ final class Card
                 unset($data['form']['fields'][$key]);
             }
         }
-        if (! $htmlData) { return $this->show(); }
+        if (! $htmlData) return $this->show();
 
         $html       = '';
         $name       = $data['form']['name'];
@@ -137,12 +136,12 @@ final class Card
         $tempData   = ['card' => []];
         
         foreach ($data as $key => &$value) { 
-            if ($key !== 'form') { $tempData['card'][$key] = $value; }
+            if ($key !== 'form') $tempData['card'][$key] = $value;
         }
         $tempData['card']['form'] = [];
 
         foreach ($data['form'] as $key => &$value) { 
-            if ($key !== 'fields') { $tempData['card']['form'][$key] = $value; }
+            if ($key !== 'fields') $tempData['card']['form'][$key] = $value;
         }
 
         $tempData['card']['icon'] = 'file-earmark-richtext';
@@ -161,9 +160,9 @@ final class Card
             unset($htmlData[$key]);
             ++$id;
         }
-        if (! $data['form']['fields']) { return $html; }
+        if (! $data['form']['fields']) return $html;
 
-        if ($noEmptyThenCollapsed === true) { $data['collapsed'] = true; }
+        if ($noEmptyThenCollapsed === true) $data['collapsed'] = true;
 
         return $this->renderData($modForm, $html);
     }
@@ -181,7 +180,7 @@ final class Card
     private function renderData(Form &$form, string $html): string 
     {
         foreach ($this->data as $key => $data) {
-            if (is_array($data) === false) { continue; }
+            if (is_array($data) === false) continue;
             $html .= $this->renderBlock($form, $data);
             unset($this->data[$key]);
         }
@@ -190,22 +189,19 @@ final class Card
 
     private function setDataFromFile(string $path = ''): void 
     {
-        
         $this->data = [];
-        if (! $this->modelName) { return; }
-        if (! $path) { $path = Paths::MODEL; }
+        if (! $this->modelName) return;
         helper('path');
-
-        if (! $textData = meLoader(castingPath($path, true) . DIRECTORY_SEPARATOR . castingPath($this->modelName, true) . '.json')) { 
-            return; 
-        }
+        $path = castingPath($path, true);
+        if (! $path) $path = Paths::MODEL;
+        $textData = getDataFromJson($path . DIRECTORY_SEPARATOR . castingPath($this->modelName, true));
+        if (! $textData) return; 
 
         try {
             $this->data = jsonDecode($textData);
         } catch (Throwable $th) {
-            try {
-                $this->data = unserialize($textData, ['allowed_classes' => false]);
-            } catch (Throwable $th) { $this->data = []; }
+            try { $this->data = unserialize($textData, ['allowed_classes' => false]); } 
+            catch (Throwable $th) { $this->data = []; }
         }
         $this->buildData();
     }
@@ -213,16 +209,16 @@ final class Card
     private function buildData(): void 
     {
         foreach ($this->data as &$cardFirst) { $data = &$cardFirst; break; }
-        if (isset($data) === false) { return; }
+        if (isset($data) === false) return;
         
-        if (isset($data['form']) === false || ! $data['form']) { $data['form'] = self::FORM; }
-        if (isset($this->data['fields']) === false) { return; }
+        if (isset($data['form']) === false || ! $data['form']) $data['form'] = self::FORM;
+        if (isset($this->data['fields']) === false) return;
 
         $data['form']['fields'] = $this->data['fields'];
-        $this->data['fields'] = [];
+        $this->data['fields']   = [];
         unset($this->data['fields']);
 
-        if ($this->modelName) { $data['form']['name'] .= $this->modelName; }
+        if ($this->modelName) $data['form']['name'] .= $this->modelName;
     }
 
     private function renderBlock(Form &$modForm, array $data): string 
@@ -236,7 +232,6 @@ final class Card
                 $html .= $modForm->show();
                 unset($data['form']);
             }
-
             $html .= $this->setFooter($data);
         }
         return $html;
@@ -276,6 +271,7 @@ final class Card
             unset($data['title']);
         }
         $head .= '</h3><div class="card-tools d-flex" ' . self::BOX . '="btn">';
+
         if (isset($data['select-language'])) {
             $head .= Component::renderSelectLang($this->langName);
             unset($data['select-language']);

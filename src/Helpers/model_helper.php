@@ -5,9 +5,8 @@ if (! function_exists('getClassModelName')) {
     {
         $class = '\\App\\Models\\Boot\\BuildModel';
         if ($modelName = ucfirst(trim($name))) { 
-            $class = '\\Sygecon\AdminBundle\\Models\\Layout\\' . $modelName . 'Model';
+            $class = '\\Sygecon\\AdminBundle\\Models\\Layout\\' . $modelName . 'Model';
         }
-        
         if (class_exists($class, $autoload) === true) { return $class; }
         return '';
     }

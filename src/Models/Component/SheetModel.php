@@ -2,7 +2,7 @@
 namespace Sygecon\AdminBundle\Models\Component;
 
 use App\Models\Boot\BaseModel as Model;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 
 final class SheetModel extends Model
 {

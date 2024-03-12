@@ -4,7 +4,7 @@ use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Database\BaseConnection;
 use Config\Services;
 use Config\Database;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 
 class LayoutSheetModel {
 

@@ -8,7 +8,7 @@ use Sygecon\AdminBundle\Libraries\Tree\Tree;
  * Serializer which creates a hierarchical, depth-first sorted representation of the tree nodes.
  *
  * @author Carsten Bluem <carsten@bluem.net>
- * @license http://www.opensource.org/licenses/bsd-license.php BSD 3-Clause License
+ * @license http://www.opensource.org/licenses/mit-license.html MIT License
  */
 class HierarchicalTreeJsonSerializer implements TreeJsonSerializerInterface
 {

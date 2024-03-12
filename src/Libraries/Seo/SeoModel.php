@@ -1,7 +1,7 @@
 <?php
 /**
- * @author  Aspada.ru
- * @license http://www.opensource.org/licenses/bsd-license.php BSD 3-Clause License
+ * @author Panin Aleksei S <https://github.com/sygecon>
+ * @license http://www.opensource.org/licenses/mit-license.html MIT License
  */
 namespace Sygecon\AdminBundle\Libraries\Seo;
 
@@ -11,7 +11,7 @@ use Config\Database;
 use CodeIgniter\HTTP\CLIRequest;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Exceptions\DatabaseException;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 use Sygecon\AdminBundle\Config\AccessControl;
 use Sygecon\AdminBundle\Libraries\Parsers\SearchBuilder;
 use Sygecon\AdminBundle\Libraries\Seo\Redirect;

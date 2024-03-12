@@ -2,7 +2,7 @@
 
 use CodeIgniter\Database\BaseConnection;
 use Config\Database;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 
 final class PageList 
 {

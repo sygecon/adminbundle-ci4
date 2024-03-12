@@ -3,8 +3,8 @@
 use Config\Services;
 use App\Models\Boot\BaseModel as Model;
 use Sygecon\AdminBundle\Config\PageTypes;
-use App\Config\Boot\Values;
-use Sygecon\AdminBundle\Libraries\ConstantBuilder;
+use Config\Boot\Values;
+use Sygecon\AdminBundle\Libraries\СonstantEditor;
 use MatthiasMullie\Minify;
 use Throwable;
 
@@ -78,7 +78,7 @@ final class ThemeModel extends Model
     public function setActiveConstant(string $name): void 
     {
         if($name) { 
-            $constEditor = new ConstantBuilder();
+            $constEditor = new СonstantEditor();
             $constEditor->set('ACTIVE_THEME', $name);
             $constEditor->save();
         }

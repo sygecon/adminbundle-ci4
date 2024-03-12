@@ -2,7 +2,7 @@
 namespace Sygecon\AdminBundle\Models;
 
 use App\Models\Boot\BaseModel as Model;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 use Sygecon\AdminBundle\Config\Paths;
 
 final class ImportModel extends Model

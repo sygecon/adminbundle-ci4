@@ -4,7 +4,7 @@ namespace Sygecon\AdminBundle\Libraries\Table;
 
 use Config\Database;
 use CodeIgniter\Database\BaseConnection;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 use Throwable;
 
 final class Forge 

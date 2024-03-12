@@ -3,7 +3,7 @@ namespace Sygecon\AdminBundle\Libraries\Tree;
 
 use CodeIgniter\Database\BaseBuilder;
 use Sygecon\AdminBundle\Libraries\Tree\NestedTab;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 
 final class NestedGet extends NestedTab 
 {

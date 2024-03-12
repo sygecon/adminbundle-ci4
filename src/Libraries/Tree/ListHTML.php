@@ -1,7 +1,7 @@
 <?php
 namespace Sygecon\AdminBundle\Libraries\Catalog;
 
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 
 class ListHTML
 {

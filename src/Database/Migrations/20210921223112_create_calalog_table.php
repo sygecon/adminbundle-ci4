@@ -1,7 +1,7 @@
 <?php namespace Sygecon\AdminBundle\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 /// php spark migrate -all
 class Migration_create_catalog_table extends Migration
 {

@@ -5,8 +5,8 @@ namespace Sygecon\AdminBundle\Commands;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 // use CodeIgniter\I18n\Time;
-use Sygecon\AdminBundle\Libraries\Update\GitLoader;
-use Sygecon\AdminBundle\Libraries\Update\Transaction;
+use App\Libraries\Loader\Githab;
+use Sygecon\AdminBundle\Libraries\LibraryLoader;
 use Throwable;
 
 // # php spark make:import about build
@@ -28,9 +28,9 @@ class Update extends BaseCommand
 
         try {
             CLI::write('Preparing processes ...');
-            $gitHab = new GitLoader();
+            $gitHab = new Githab();
             if ($result = $gitHab->build($isUpdate)) {
-                $loader = new Transaction();
+                $loader = new LibraryLoader();
                 $loader->build($result);
             }
         } catch (Throwable $th) {

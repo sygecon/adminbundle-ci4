@@ -2,17 +2,14 @@
 
 namespace Sygecon\AdminBundle\Libraries;
 
-final class ConstantBuilder {
-    
+final class СonstantEditor
+{
     private const FILE_PATH = APPPATH . 'Config' . DIRECTORY_SEPARATOR . 'Boot'  . DIRECTORY_SEPARATOR;
 
-    private bool $isLoader = false;
-
-    private bool $isChange = false;
-
-    private string $fileName = '';
-
-    private array $content = [];
+    private bool $isLoader  = false;
+    private bool $isChange  = false;
+    private array $content  = [];
+    private $fileName       = '';
 
     /** * Create a new writer instance */
     public function __construct(string $fileName = 'options') 

@@ -4,7 +4,7 @@ namespace Sygecon\AdminBundle\Controllers\Api;
 
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\API\ResponseTrait;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 use Sygecon\AdminBundle\Controllers\AdminController;
 use Sygecon\AdminBundle\Libraries\Tree\PageList;
 use Sygecon\AdminBundle\Libraries\Tree\NestedGet;

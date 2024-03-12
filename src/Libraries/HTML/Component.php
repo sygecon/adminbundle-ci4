@@ -1,7 +1,7 @@
 <?php 
 namespace Sygecon\AdminBundle\Libraries\HTML;
 
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 use Sygecon\AdminBundle\Config\PageTypes;
 use Sygecon\AdminBundle\Libraries\Tree\PageList;
 use Throwable;
@@ -68,52 +68,44 @@ final class Component
     }
 
     /// Выполнение функций из строки  -------------------------------------------
-	public static function executeAsFunction(string $str = ''): mixed
+	public static function executeAsFunction(string $str): mixed
     {
-		if (! $str = trim($str)) { return ''; }
-        $go = false;
-        $class = '';
-        $params = '';
-        $matches = [];
-
-        preg_match('|(.*){(.*)/}(.*)|is', $str, $matches);
-        if ($matches) {
-            $str = trim($matches[1]);
-            $class = trim($matches[2]);
-            $params = trim($matches[3]);
-            unset($matches[0], $matches[1], $matches[2], $matches[3], $matches);
-            if (mb_substr($class, 0, 1) === '|') {
-                $class = trim(str_replace('|', chr(92), $class), '\\');
-            }
-        }
-
-        if ($class && class_exists($class) && method_exists($class, $str)) {
-            if (isset($params) && $params) {
-                return call_user_func([new $class, $str], $params);
-            }
-            return call_user_func([new $class, $str]);
-        }
+        $fnct       = '';
+        $class      = '';
+        $params     = '';
+        $matches    = [];
         
-        if (mb_strpos($str, '::')) {
-            if (mb_substr($str, 0, 1) === '|') { 
-                $str = trim(str_replace('|', chr(92), $str), '\\'); 
-            }
-            $go = true;
-        } else if (function_exists($str)) {
-            $go = true;
-        } else if ($class) {
-            if (isset($class[$str])) { return $class[$str]; }
-            if (isset($class->{$str})) { return $class->{$str}; }
+        if (! preg_match('#(.+)\{(.+)\/\}(.?)#uim', trim($str), $matches)) return null;
+        if ($matches) {
+            $fnct   = trim($matches[1]);
+            $class  = trim($matches[2]);
+            $params = trim($matches[3]);
+            if (strpos($class, '|') !== false) $class = rtrim(str_replace('|', '\\', $class), '\\');
         }
 
-        if ($go === true) {
-            if ($class) {
-                if ($params) { return call_user_func($str, $class, $params); }
-                return call_user_func($str, $class);
-            }
-            return $str();
+        if ($class && class_exists($class) === true && method_exists($class, $fnct) === true) {
+            try {
+                $model = new $class();
+                if (! $params) { return $model->$fnct(); }
+                return $model->$fnct($params);
+            } catch (Throwable $th) { return null; }
         }
-		return $str;
+        if ($fnct[0] === '|') $fnct = rtrim(str_replace('|', '\\', $fnct), '\\');
+
+        if (function_exists($fnct)) { $matches = []; } else 
+        if ($class) {
+            if (isset($class[$fnct])) return $class[$fnct];
+            if (isset($class->{$fnct})) return $class->{$fnct};
+        } else 
+        if (! strpos($fnct, '::')) return null;
+        
+        try {    
+            if ($class) {
+                if (! $params) return call_user_func($fnct, $class);
+                return call_user_func($fnct, $class, $params);
+            }
+            return $fnct();
+        } catch (Throwable $th) { return null; }
 	}
 
     public static function faIcon(string $icon = ''): string 

@@ -1,14 +1,14 @@
 <?php
 declare(strict_types=1);
 /**
- * @author  Aspada.ru
- * @license http://www.opensource.org/licenses/bsd-license.php BSD 3-Clause License
+ * @author Panin Aleksei S <https://github.com/sygecon>
+ * @license http://www.opensource.org/licenses/mit-license.html MIT License
  */
 namespace Sygecon\AdminBundle\Libraries\HTML\Dom;
 
+use App\Libraries\Loader\WebDoc;
 use Sygecon\AdminBundle\Config\Paths;
 use Sygecon\AdminBundle\Config\PageTypes;
-use Sygecon\AdminBundle\Libraries\HTML\WebDoc;
 use DOMDocument;
 use DOMXPath;
 use DOMElement;
@@ -840,7 +840,7 @@ final class Document
         if (! isset($matches[1])) { return; }
         
         foreach ($matches[1] as &$value) {
-            preg_match('/[\s]*(http\-equiv|property|itemprop|name)="?([^>"]*)"?[\s]*content="?([^>"]*)"?[\s]*[\/]?[\s]*/si', $value, $match);
+            preg_match('/\s*(http\-equiv|property|itemprop|name)="?([^>"]*)"?\s*content="?([^>"]*)"?[\s]*[\/]?[\s]*/si', $value, $match);
             if (isset($match[3])) {
                 $this->metaNodes[strtolower(trim($match[1]))][strtolower(trim($match[2]))] = self::stripTags($match[3]);
                 continue;

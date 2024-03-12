@@ -9,7 +9,7 @@ use Sygecon\AdminBundle\Controllers\AdminController;
 use Sygecon\AdminBundle\Libraries\Control\Finder;
 use Sygecon\AdminBundle\Models\Component\RelationshipModel;
 use Sygecon\AdminBundle\Config\FormDataTypes;
-use App\Config\Boot\NestedTree;
+use Config\Boot\NestedTree;
 
 use function function_exists;
 use function is_file;

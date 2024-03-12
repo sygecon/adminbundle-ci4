@@ -3,8 +3,8 @@ namespace Sygecon\AdminBundle\Libraries\Control;
 /**
  * Creates and provides access to a node tree of specific system directories.
  *
- * @author  Aspada.ru
- * @license http://www.opensource.org/licenses/bsd-license.php BSD 3-Clause License
+ * @author Panin Aleksei S <https://github.com/sygecon>
+ * @license http://www.opensource.org/licenses/mit-license.html MIT License
 */
 use Sygecon\AdminBundle\Config\Paths;
 use Throwable;
