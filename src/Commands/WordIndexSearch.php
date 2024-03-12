@@ -24,8 +24,6 @@ class WordIndexSearch extends BaseCommand
             $indexWord = new SearchBuilder();
             $indexWord->builder();
             CLI::write('Process completed!');
-        } catch (Throwable $th) {
-            $this->showError($th);
-        }
+        } catch (Throwable $th) { $this->showError($th); }
     }
 }
