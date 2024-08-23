@@ -1,7 +1,6 @@
 <?php
 namespace Sygecon\AdminBundle\Controllers\Catalog;
 
-use CodeIgniter\HTTP\ResponseInterface;
 use Sygecon\AdminBundle\Controllers\AdminController;
 use Sygecon\AdminBundle\Models\Template\LayoutModel;
 use Sygecon\AdminBundle\Models\Catalog\PagesModel as BaseModel;
@@ -19,12 +18,11 @@ final class Pages extends AdminController
         $this->lang = $this->locale;
     }
 
-    public function index($lang = APP_DEFAULT_LOCALE, $parentId = 0, $parent = 0): ResponseInterface
+    public function index($lang = APP_DEFAULT_LOCALE, $parentId = 0, $parent = 0): string
     {
-        if ($this->request->getMethod() !== 'get') {
-            return $this->fail(lang('Admin.IdNotFound'));
+        if (strtolower($this->request->getMethod()) !== 'get') {
+            return $this->pageNotFound();
         }
-
         if (isset($lang)) {
             if (! is_null($lang) && is_numeric($lang)) {
                 $parentId = (int) $lang;
@@ -36,9 +34,10 @@ final class Pages extends AdminController
         if (! $parent && isset($parentId) && $parentId) { $parent = (int) $parentId; }
         
         if ($this->request->isAJAX()) {
-            return $this->respond(
-                jsonEncode($this->model->getPages((int) $parent, $this->lang), false)
-            , 200);
+            $data = $this->model->getPages((int) $parent, $this->lang);
+            // helper('path');
+            // baseWriteFile('log.txt', jsonEncode($data, true));
+            return $this->successfulResponse($data);
         }
 
         $layoutModel = new LayoutModel();
@@ -56,23 +55,27 @@ final class Pages extends AdminController
         if ($parent != 0) {
             $data['head']['breadcrumb'] = $this->model->getBreadCrumb((int) $parent, $this->lang);
         }
-        return $this->respond($this->build('pages', $data, 'Catalog'), 200);
+        return $this->build('pages', $data, 'Catalog');
     }
 
     /**
-     * Create a new resource object, from "posted" parameters.
-     * @return array an array
+     * Create a new object.
+     * @return string
      */
-    public function create(string $lang = APP_DEFAULT_LOCALE, int $parentId = 0): ResponseInterface 
+    public function create(string $lang = APP_DEFAULT_LOCALE, int $parentId = 0): string 
     {
         // helper('path');
         // baseWriteFile('log.txt', $parentId . ' = ' . $lang);
 
-        if (! $data = $this->postDataValid($this->request->getPost(), 128)) { return $this->fail(lang('HeadLines.catalog.msgErrorCreate')); }
+        if (! $data = $this->postDataValid($this->request->getPost(), 128)) { 
+            return $this->pageNotFound(); 
+        }
         $this->clearing($data);
         $data['name'] = $this->checkName($data['name']);
         if (! isset($data['name']) || $data['name'] === '') { $data['name'] = 'index'; }
-        if (strlen($data['name']) < 3) { return $this->fail(lang('HeadLines.catalog.msgErrorCreate')); }
+        if (strlen($data['name']) < 3) { 
+            return $this->pageNotFound(); 
+        }
         $this->setLanguage($lang);
         $this->normalize($data);
         $first = (isset($data['is_first']) ? true : false);
@@ -83,15 +86,15 @@ final class Pages extends AdminController
         if (! isset($data['parent'])) { $data['parent'] = (int) $parentId; }
         
         if ($id = $this->model->create($data, $this->lang, $first)) {
-            return $this->respondCreated($id, lang('HeadLines.catalog.msgCreate'));
+            return $this->successfulResponse($id);
         }
-        return $this->fail(lang('HeadLines.catalog.msgErrorCreate'));
+        return $this->pageNotFound();
     }
 
-    public function parent(int $id = 0): ResponseInterface 
+    public function parent(int $id = 0) 
     {
-        if (! $id) { return $this->failNotFound(lang('Admin.navbar.msg.msg_get_fail')); }
-        return $this->respond((int) $this->model->getParentNode($id), 200);
+        if (! $id) return $this->pageNotFound();
+        return $this->successfulResponse((int) $this->model->getParentNode($id));
     }
 
     /**
@@ -99,69 +102,62 @@ final class Pages extends AdminController
      * @param int $id
      * @return array an array
      */
-    public function edit(string $lang = APP_DEFAULT_LOCALE, int $id = 0): ResponseInterface 
+    public function edit(string $lang = APP_DEFAULT_LOCALE, int $id = 0): string 
     {
-        if (! $id) { return $this->fail(lang('HeadLines.catalog.msgErrorCreate')); }
-        if (! $data = $this->model->getNode((int) $id)) { return $this->fail(lang('Admin.IdNotFound')); }
+        if (! $id) return $this->pageNotFound();
+        if (! $data = $this->model->getNode((int) $id)) return $this->pageNotFound();
+
         $this->setLanguage($lang);
         $this->model->setLinkPages($data, $this->lang);
-        return $this->respond(
-            jsonEncode(['data' => $data], false)
-        , 200);
+        return $this->successfulResponse(jsonEncode(['data' => $data], false));
     }
 
     /**
-     * Add or update a model resource, from "posted" properties.
-     * @param int $id
-     * @return array an array
+     * Update a model.
+     * @params int
+     * @return string
      */
-    public function update(string $lang = APP_DEFAULT_LOCALE, int $id = 0, int $parentId = 0): ResponseInterface 
+    public function update(string $lang = APP_DEFAULT_LOCALE, int $id = 0, int $parentId = 0): string 
     {
-        if (! $id) { return $this->fail(lang('Admin.IdNotFound')); }
-        if (! $this->request->isAJAX()) { return $this->fail(lang('Admin.IdNotFound')); }
+        if (! $id) return $this->pageNotFound();
+        if (! $this->request->isAJAX()) return $this->pageNotFound();
         if (! $data = $this->postDataValid($this->request->getRawInput(), 128)) {
-            return $this->fail(lang('Admin.IdNotFound'));
+            return $this->pageNotFound();
         }
         $this->clearing($data);
         $this->setLanguage($lang);
 
         if (isset($data['pos']) && isset($data['action']) && $data['action'] === 'sortable') {
-            if ($this->model->moveToPos((int) $id, (int) $data['pos'])) {
-                return $this->respond($id, 200, lang('HeadLines.catalog.msgUpdate'));
-            }
+            if ($this->model->moveToPos((int) $id, (int) $data['pos'])) 
+                return $this->successfulResponse($id);
         } else
         if (isset($data['title'])) {
             $this->normalize($data);
             if (isset($data['name'])) {
                 $data['name'] = $this->checkName($data['name']);
             }
-            if ($this->model->dataСhange((int) $id, $data)) {
-                return $this->respond($id, 200, lang('HeadLines.catalog.msgUpdate'));
-            }
+            if ($this->model->dataСhange((int) $id, $data)) 
+                return $this->successfulResponse($id);
         } else 
         if (isset($data['active'])) {
-            if ($this->model->active((int) $id)) {
-                return $this->respond($id, 200, lang('HeadLines.catalog.msgUpdate'));
-            }
+            if ($this->model->active((int) $id)) return $this->successfulResponse($id);
         } else 
         if (isset($data['icon'])) {
-            if ($this->model->setIcon((int) $id, checkFileName($data['icon']))) {
-                return $this->respond($id, 200, lang('HeadLines.catalog.msgUpdate'));
-            }
+            if ($this->model->setIcon((int) $id, checkFileName($data['icon']))) 
+                return $this->successfulResponse($id);
         }
-
-        return $this->fail(lang('Admin.IdNotFound'));
+        return $this->pageNotFound();
     }
 
     /**
      * Delete the designated resource object from the model.
      * @param int $id
+     * @return string
      */
-    public function delete(int $id = 0) {
-        if (! $this->model->deleteNode((int) $id)) {
-            return $this->failNotFound(lang('Admin.navbar.msg.msg_get_fail'));
-        }
-		return $this->respondDeleted((int) $id);
+    public function delete(int $id = 0): string 
+    {
+        if (! $this->model->deleteNode((int) $id)) return $this->pageNotFound();
+		return $this->successfulResponse($id);
     }
 
     private function setLanguage(string $lang): void
@@ -176,7 +172,8 @@ final class Pages extends AdminController
     }
 
     /**
-     * Get resource data.
+     * Set name normalaze.
+     * @return string
      */
     private function checkName(string $name): string
     {

@@ -1,11 +1,10 @@
 <?php namespace Sygecon\AdminBundle\Models\Template;
 
+use CodeIgniter\Autoloader\Autoloader;
 use Config\Services;
 use App\Models\Boot\BaseModel as Model;
 use Sygecon\AdminBundle\Config\PageTypes;
-use Config\Boot\Values;
 use Sygecon\AdminBundle\Libraries\СonstantEditor;
-use MatthiasMullie\Minify;
 use Throwable;
 
 final class ThemeModel extends Model
@@ -25,6 +24,15 @@ final class ThemeModel extends Model
             'suffix'    => ' rel="stylesheet" type="text/css" /',
             'tagEnd'    => '>'
         ]
+    ];
+
+    private const CLASS_MINIFY = 'MatthiasMullie\\Minify';
+
+    private const LOAD_CLASSES = [
+        'MatthiasMullie\\PathConverter' => 
+            ROOTPATH . 'vendor' . DIRECTORY_SEPARATOR . 'matthiasmullie' . DIRECTORY_SEPARATOR . 'path-converter' . DIRECTORY_SEPARATOR . 'src',
+        self::CLASS_MINIFY => 
+            ROOTPATH . 'vendor' . DIRECTORY_SEPARATOR . 'matthiasmullie' . DIRECTORY_SEPARATOR . 'minify' . DIRECTORY_SEPARATOR . 'src'
     ];
 
     protected $resource = '{"scripts":[],"styles":[]}';
@@ -207,36 +215,49 @@ final class ThemeModel extends Model
     // Создание Minify файла определенного типа
     public function minifyFile(string $name = '', string $type = '', array &$listFiles = [], bool $isActive = true): void
     {
-        if ($name && $type) {
-            $dir = FCPATH . castingPath(trim(PATH_THEME, '\\/')) . DIRECTORY_SEPARATOR . $name . DIRECTORY_SEPARATOR . PageTypes::FILE_PATH[$type];
-            if (is_dir($dir) === false) { return; }
-            $dir .= DIRECTORY_SEPARATOR;
-            $miniFile = $dir . $this->setMinifyName($type);
-            if (file_exists($miniFile) === true) { @unlink($miniFile); }
-            $list = [];
-            foreach ($listFiles as $i => $fileName) {
-                $file = str_replace(DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR, $dir . $fileName);
-                if (is_file($file)) { $list[] = $file; }
-                unset($listFiles[$i]);
-            }
-            if ($list) {
-                try {
-                    $this->removingRedundantFiles($dir);
-                    
-                    $minifier = ($type === 'css' ? new Minify\CSS($list) : new Minify\JS($list));
-                    $minifier->minify($miniFile);
-
-                    if ($isActive) { 
-                        $this->setLinkToMinifyInTemplate($type, $miniFile); 
-                    }
-                } catch (Throwable $th) {
-                    helper('path');
-                    baseWriteFile(DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . 'Errors' . DIRECTORY_SEPARATOR . 'minify-' . $type . '.log', $th->getMessage());
-                }
-            } else if ($isActive) {
-                $this->removingLinkToMinifyFromTemplate($type, $name);
-            }
+        if (! $name) return;
+        if (! $type) return;
+        
+        $dir = FCPATH . castingPath(trim(PATH_THEME, '\\/')) . DIRECTORY_SEPARATOR . $name . DIRECTORY_SEPARATOR . PageTypes::FILE_PATH[$type];
+        if (is_dir($dir) === false) return;
+        $dir .= DIRECTORY_SEPARATOR;
+        $miniFile = $dir . $this->setMinifyName($type);
+        if (file_exists($miniFile) === true) @unlink($miniFile);
+        $list = [];
+        foreach ($listFiles as $i => $fileName) {
+            $file = str_replace(DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR, $dir . $fileName);
+            if (is_file($file)) { $list[] = $file; }
+            unset($listFiles[$i]);
         }
+
+        if (! $list) {
+            if ($isActive) $this->removingLinkToMinifyFromTemplate($type, $name);
+            return;
+        }
+
+        try {
+            $this->removingRedundantFiles($dir);
+            $className = ($type === 'css' ? 'CSS' : 'JS');
+            if (! $className = $this->includeMinifyClass($className)) return;
+
+            $minifier = new $className($list);
+            $minifier->minify($miniFile);
+            if ($isActive) $this->setLinkToMinifyInTemplate($type, $miniFile); 
+
+        } catch (Throwable $th) {
+            helper('path');
+            baseWriteFile(DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . 'Errors' . DIRECTORY_SEPARATOR . 'minify-' . $type . '.log', $th->getMessage());
+        } 
+    }
+
+    private function includeMinifyClass(string $type): string
+    {
+        $className = '\\' . self::CLASS_MINIFY . '\\' . $type;
+        if (class_exists($className, false) === true) { return $className; }
+
+        $loader = new Autoloader();
+        $loader->addNamespace(self::LOAD_CLASSES)->register();
+        return (class_exists($className) === true ? $className : '');
     }
 
     private function setMinifyName(string $ext): string
@@ -349,7 +370,8 @@ final class ThemeModel extends Model
             }
         }
         if (isset($file) && $html = readingDataFromFile($file)) {
-            $link = '/' . toUrl(trim(PATH_THEME, '\\/') . '/' . $name . '/' . PageTypes::FILE_PATH[$type]) . '/' . PageTypes::THEME_MINIFY_FILE_NAME . '.';
+            $link = '/' . toUrl(trim(PATH_THEME, '\\/') . '/' . $name . '/' . 
+                PageTypes::FILE_PATH[$type]) . '/' . PageTypes::THEME_MINIFY_FILE_NAME . '.';
             $separate   = '"';
             $this->cleaningHtml($html, $type);
 

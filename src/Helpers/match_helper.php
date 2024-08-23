@@ -1,30 +1,30 @@
 <?php
 
 if (! function_exists('isInteger')) {
-    function isInteger($value): bool
+    function isInteger(mixed $value): bool
     {
-        if (! is_numeric($value)) return false;
-        return (bool) preg_match('/\A[\-+]?\d+\z/', $value ?? '');
+        if (is_numeric($value) === false) return false;
+        return (bool) preg_match('/\A[\-+]?\d+\z/', (string) $value ?? '');
     }
 }
 
 if (! function_exists('isWholeNumber')) {
-    function isWholeNumber($value): bool
+    function isWholeNumber(mixed $value): bool
     {
-        if (! is_numeric($value)) return false;
-        return (bool) preg_match('/\A[-+]?\d{0,}\.?\d+\z/', $value ?? '');
+        if (is_numeric($value) === false) return false;
+        return (bool) preg_match('/\A[-+]?\d{0,}\.?\d+\z/', (string) $value ?? '');
     }
 }
 
 if (! function_exists('inArray')) {
     function inArray(string $text = '', array $arr = [], string $key = 'link'): bool
     {
+        $pos = (int) 0;
         foreach($arr as &$item) {
-            $res = (is_array($item) === true
-                ? strcmp($text, $item[$key])
-                : strcmp($text, $item)
-            );
-            if ($res === 0) return true;
+            if (is_array($item) === true)
+                if ($pos === strcmp($text, $item[$key])) return true;
+            else
+                if ($pos === strcmp($text, $item)) return true;
         }
         return false;
     }
@@ -33,12 +33,12 @@ if (! function_exists('inArray')) {
 if (! function_exists('contains')) {
     function contains(string $text = '', array $arr = [], string $key = 'link'): bool
     {
+        $pos = (int) 0;
         foreach($arr as &$item) {
-            $res = (is_array($item) === true
-                ? strpos($text, $item[$key])
-                : strpos($text, $item)
-            );
-            if ($res !== false && $res == 0) { return true; }
+            if (is_array($item) === true)
+                if ($pos === strpos($text, $item[$key])) return true;
+            else
+                if ($pos === strpos($text, $item)) return true;
         }
         return false;
     }

@@ -2,8 +2,6 @@
 
 namespace Sygecon\AdminBundle\Controllers\Api;
 
-use CodeIgniter\HTTP\ResponseInterface;
-use CodeIgniter\API\ResponseTrait;
 use Config\Services;
 use Sygecon\AdminBundle\Controllers\AdminController;
 use Sygecon\AdminBundle\Libraries\Control\Finder;
@@ -16,38 +14,35 @@ use function is_file;
 use function is_array;
 use function array_splice;
 use function isGroupAdmin;
-use function jsonEncode;
 
-final class AspControl extends AdminController {
-
-    use ResponseTrait;
-
-    public function me_tree(): ResponseInterface 
+final class AspControl extends AdminController 
+{
+    public function me_tree(): string 
     {
-        return $this->respond($this->getBuilder('controllers'), 200);
+        return $this->getBuilder('controllers');
     }
 
-    public function me_list(): ResponseInterface 
+    public function me_list(): string 
     {
-        return $this->respond($this->getBuilder('controllers', false), 200);
+        return$this->getBuilder('controllers', false);
     }
 
-    public function me_model(): ResponseInterface 
+    public function me_model(): string 
     {
-        return $this->respond($this->getBuilder('models'), 200);
+        return $this->getBuilder('models');
     }
 
-    public function me_layout(): ResponseInterface 
+    public function me_layout(): string 
     {
-        return $this->respond($this->getBuilder('layout'), 200);
+        return $this->getBuilder('layout');
     }
 
-    public function me_library(): ResponseInterface 
+    public function me_library(): string 
     {
-        return $this->respond($this->getBuilder('library'), 200);
+        return $this->getBuilder('library');
     }
 
-    public function me_data_types(): ResponseInterface 
+    public function me_data_types(): string 
     {
         $inputs = FormDataTypes::INPUTS;
         $variables = FormDataTypes::VARIABLES;
@@ -72,16 +67,16 @@ final class AspControl extends AdminController {
             if ($value && isset($value['tab'])) { $inputs[$key] = $value['tab']; }
         }
 
-        return $this->respond(jsonEncode([
+        return $this->successfulResponse([
             'title'     => FormDataTypes::BTN_TITLE, 
             'group'     => FormDataTypes::GROUP_TITLE, 
             'variables' => $variables, 
             'inputs'    => $inputs,
             'attributes'=> FormDataTypes::ATTRIBUTES
-        ], false), 200);
+        ]);
     }
 
-    public function me_lang(): ResponseInterface 
+    public function me_lang(): string 
     {
         $page = 'HeadLines';
         $list = [];
@@ -96,17 +91,18 @@ final class AspControl extends AdminController {
             $list[] = ['id' => (int) 0, 'parent' => (int) 0, 'value' => $page, 'name' => $page, 'title' => $page];
             $this->arrayToList($array, $list, $id, $id);
         }
-        return $this->respond(jsonEncode($list, false), 200);
+        return $this->successfulResponse($list);
     }
 
     private function getBuilder(string $var = '', bool $asTree = true): string 
     {
         if (function_exists('isGroupAdmin') && isGroupAdmin()) {
             $model = new Finder();
-            if (! $data = $model->get($var, $asTree)) { return '[]'; }
-            return jsonEncode($data, false);
+            if ($data = $model->get($var, $asTree)) { 
+                return $this->successfulResponse($data);
+            }
         }
-        return '[]';
+        return $this->successfulResponse('[]');
     }
 
     private function arrayToList(array &$array, array &$list, int $parent, int &$id): void 
@@ -124,19 +120,19 @@ final class AspControl extends AdminController {
     }
 
     //Функция формирования дерева children
-    private function buildTree(array $elements = [], int $parentId = 0): array 
-    {
-        $branch = [];
-        foreach ($elements as $element) {
-            if ($element['parent'] == $parentId) {
-                $children = $this->buildTree($elements, $element['id']);
-                if ($children) { 
-                    $element[NestedTree::JSON_KEY_CHILDREN] = $children; 
-                }
-                $branch[] = $element;
-            }
-        }
-        return $branch;
-    }
+    // private function buildTree(array $elements = [], int $parentId = 0): array 
+    // {
+    //     $branch = [];
+    //     foreach ($elements as $element) {
+    //         if ($element['parent'] == $parentId) {
+    //             $children = $this->buildTree($elements, $element['id']);
+    //             if ($children) { 
+    //                 $element[NestedTree::JSON_KEY_CHILDREN] = $children; 
+    //             }
+    //             $branch[] = $element;
+    //         }
+    //     }
+    //     return $branch;
+    // }
 
 }

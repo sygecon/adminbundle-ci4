@@ -6,28 +6,27 @@ use Sygecon\AdminBundle\Config\FormDataTypes;
 
 final class SheetForge 
 {
-    private $name       = '';
-    private $prefix     = '';
-    
-    private array $forbidName   = ['block_layers', 'block_resources'];
+    public $relationsTab        = '';
+
+    private $name               = '';
+    private $prefix             = '';
 
     private array $pageField    = [
         'page_id' => [
-            'type' => 'BIGINT', 
-            'constraint' => 20, 
-            'unsigned' => true
+            'type'              => 'BIGINT', 
+            'constraint'        => 20, 
+            'unsigned'          => true
         ]
     ];
 
-    public $relationsTab = '';
-
-    public function __construct(string $name = '', string $pefix = '') {
+    public function __construct(string $name = '', string $pefix = '') 
+    {
         helper('path');
-
-        $name = strtolower(checkFileName($name));
-        if ($name && in_array($name, $this->forbidName) === false) { 
-            $this->name = $name; 
-            if ($pefix) { $this->prefix = $pefix; }
+        if ($name = strtolower(checkFileName($name))) {
+            if (in_array($name, Paths::FORBID_CLASS_NAMES) === false) { 
+                $this->name = $name; 
+                if ($pefix) { $this->prefix = $pefix; }
+            }
         }
     }
     

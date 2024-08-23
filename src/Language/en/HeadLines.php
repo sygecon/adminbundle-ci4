@@ -4,6 +4,7 @@ return [
     'field'     => 'Field',
     'clearForm' => 'Clear form',
     'save'      => 'Save',
+    'apply'     => 'Apply',
     'btnConfirmSave'=> 'Do you want to save the changes you made?',
     'mainSettings'  => 'Main Settings',
     'extraOptions'  => 'Extra Options',
@@ -68,6 +69,9 @@ return [
             'formPageModelAdmin' => ', for page administrator',
             'filesGeneratingDataForm' => 'Page generation files (styles, scripts)',
             'preventIndexing' => 'Prevent indexing',
+            'structureConfirm'=> 'Do you really want to change the structure of the project?',
+            'structureAnswer'=> 'The project structure has been successfully changed.',
+            'structureAnswerError'=> 'Mistake! The project structure has not been changed.',
             'hint' => [
                 'name' => 'Displayed in menus, lists, paths. It is recommended to give pages short titles so they will fit in the menu.',
                 'slug' => 'A pseudo-static address (URL) will be shown in the address bar of the browser.',

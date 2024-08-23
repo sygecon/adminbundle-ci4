@@ -1,7 +1,6 @@
 <?php
 namespace Sygecon\AdminBundle\Controllers\Users;
 
-use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 use Config\Database;
@@ -16,7 +15,8 @@ use Throwable;
 
 final class Manage extends AdminController 
 {
-    private const COL_RELATED = 'relatеd';
+    private const COL_RELATED           = 'relatеd';
+    private const USER_DETAILS_TABLE    = 'user_details';
 
     private $db;
 
@@ -38,12 +38,10 @@ final class Manage extends AdminController
         }
     }
 
-    public function index(int $userId = 0, string $releted = 'staff'): ResponseInterface 
+    public function index(int $userId = 0, string $releted = 'staff'): string 
     {
-        if ($this->request->getMethod() !== 'get') {
-            return $this->fail(lang('Admin.IdNotFound'));
-        }
-
+        if (strtolower($this->request->getMethod())  !== 'get') return $this->pageNotFound();
+        
         if ($this->request->isAJAX()) {
             if ($userId) {
                 $data = [];
@@ -51,48 +49,50 @@ final class Manage extends AdminController
                 if (isset($data['dataBasic']['phone'])) {
                     $data['dataBasic']['phone'] = asPhone($data['dataBasic']['phone']);
                 }
-                return $this->respond(jsonEncode($data, false), 200);
+                return $this->successfulResponse($data);
             }
+
             $data = $this->getData(0, $releted);
             foreach ($data as &$item) {
                 $item['created_at'] = meDate($item['created_at'], 'j M Y');
             }
-            return $this->respond(jsonEncode($data, false), 200);
+            return $this->successfulResponse($data);
         }
-        
+
         if ($userId) { // Редактор данных пользователя
-            return $this->respond($this->build('user_edit', [
+            return $this->build('user_edit', [
                 'head' => [
                     'h1' => $this->genLinkHome(lang('Admin.user.editDataHeadTitle'))
                 ],
                 'model_name' => $releted
-            ], 'User'), 200);
+            ], 'User');
         }
 
-        return $this->respond(
-            $this->build('manage_' . $releted, ['head' => 
-                ['icon' => 'people', 'title' => lang('Admin.user.pageManageHeadTitle')]
-            ], 'User')
-        , 200);
+        return $this->build('manage_' . $releted, ['head' => [
+            'icon' => 'people', 
+            'title' => lang('Admin.user.pageManageHeadTitle')
+        ]], 'User');
     }
 
     /**
      * load Avatar
      * @param int $userId
-     * @return ResponseInterface
+     * @return string
      */
-    public function set_avatar(int $userId = 0): ResponseInterface 
+    public function set_avatar(int $userId = 0): string 
     {
         $res = 'error';
-        if (! $userId) { return $this->respond($res, 200); }
+        if (! $userId) return $this->successfulResponse($res);
+
         $imageExt = ['png', 'svg', 'gif', 'webp', 'jpg', 'jpeg', 'ico', 'svgz', 'bmp', 'xbm', 'pjp', 'jfif', 'pjpeg', 'avif'];
         $resp = getRequestPut();
         if (! isset($resp->ext) || ! isset($resp->data) || ! in_array($resp->ext, $imageExt)) { 
-            return $this->respond($res, 200); 
+            return $this->successfulResponse($res);
         }
         $tmp = Paths::AVATAR . 'me_tmp.' . $resp->ext;
-        if (! file_put_contents($tmp, $resp->data, LOCK_EX)) { return $this->respond($res, 200); }
-
+        if (! file_put_contents($tmp, $resp->data, LOCK_EX)) { 
+            return $this->successfulResponse($res);
+        }
         $res = Paths::AVATAR . $userId;
         foreach ($imageExt as $i => $e) {
             if (is_file($res . '.' . $e)) { unlink($res . '.' . $e); }
@@ -106,38 +106,39 @@ final class Manage extends AdminController
         $meImage->setMaxSize(175);
         $meImage->saveTo($ext, 75);
         if (! $meImage->err) { 
-            if (! rename($tmp, $ext)) { $res = 'error'; }
+            if (! rename($tmp, $ext)) $res = 'error';
         } else { $res = 'error'; }
 
-        if (is_file($tmp)) { unlink($tmp); }
-        return $this->respond($res, 200);
+        if (is_file($tmp)) unlink($tmp); 
+        return $this->successfulResponse($res);
     }
 
     /**
-     * Add or update a model resource, from "posted" properties.
+     * Updating object data.
      * @param int $userId
-     * @return ResponseInterface
+     * @return string
      */
-    public function update(int $userId = 0): ResponseInterface 
+    public function update(int $userId = 0): string 
     {
-        if (! $userId) { return $this->fail(lang('Auth.invalidUser')); }  
-        if (! $this->request->isAJAX()) { 
-            return $this->fail(lang('Auth.invalidUser')); 
-        }
+        if (! $userId) return $this->pageNotFound();  
+        if (! $this->request->isAJAX()) return $this->pageNotFound();
+
         $data = $this->postTokenValid($this->request->getRawInput());
         // if ($_SERVER['REQUEST_METHOD'] === "PUT") parse_str(file_get_contents('php://input'), $data);
         // if (!isset($data) || !$data) $data = $this->request->getPost();
-        if (! isset($data) || ! $data) { return $this->fail(lang('Auth.invalidUser')); }
+        if (! isset($data) || ! $data) return $this->pageNotFound();
         // Set User Active  
         if (array_key_exists('active', $data)) {
             $model = model('UserModel');
             $val = 1;
-            if ($data['active'] && $data['active'] !== "0") { $val = 0; }
+            if ($data['active'] && $data['active'] !== "0") $val = 0; 
+
             if ($model->update((int)$userId, ['active' => $val])) {
-                return $this->respond($val, 200, lang('Admin.user.msg.msg_update', [$userId]));
+                return $this->successfulResponse($val);
             }
-            return $this->fail(lang('Auth.invalidUser'));
+            return $this->pageNotFound();
         }
+
         // Normalize data
         foreach ($data as $key => &$value) { 
             if (in_array($key, ['lang_id', 'is_man', 'inn', 'postcode'])) {
@@ -185,9 +186,9 @@ final class Manage extends AdminController
                 $user->fill($data);
                 $users->save($user);
 
-                return $this->respond($userId, 200, lang('Admin.user.msg.msg_update', [$userId]));
+                return $this->successfulResponse($userId);
             }
-            return $this->fail(lang('Auth.invalidUser'));
+            return $this->pageNotFound();
         }
 
         // Is Personal User Data
@@ -205,10 +206,10 @@ final class Manage extends AdminController
             unset($data[$key]);
         }
         unset($data);
-        if (! $dataNew) { return $this->fail(lang('Auth.invalidUser')); }
-        $dataNew = [ UserControl::COL_DATA => $this->encrypt(jsonEncode($dataNew, false)) ];
+        if (! $dataNew) return $this->pageNotFound();
 
-        $builder = $this->db->table(UserControl::TABLE);
+        $dataNew = [ 'data' => $this->encrypt(jsonEncode($dataNew, false)) ];
+        $builder = $this->db->table(self::USER_DETAILS_TABLE);
         $row = $builder->select('user_id')->where('user_id', (int) $userId)->get()->getRow();
         
         $this->db->transStart();
@@ -219,29 +220,26 @@ final class Manage extends AdminController
             $builder->set($dataNew)->insert();
         }
         $this->db->transComplete();
-        return $this->respond($userId, 200, lang('Admin.user.msg.msg_update', [$userId]));
+        return $this->successfulResponse($userId);
     }
 
     /**
-     * Delete the designated resource object from the model.
+     * Delete the object from the model.
      * @param int $userId
-     * @return ResponseInterface
+     * @return string
      */
-    public function delete(int $userId = 0): ResponseInterface 
+    public function delete(int $userId = 0): string 
     {
-        if ($userId) {  
-            $users = model('UserModel');
-            $user = $users->findById((int) $userId);
-            if ($user && !$user->inGroup('superadmin')) {
-                $users->delete((int) $userId, true);
-                cache()->delete("{$userId}_groups");
-                cache()->delete("{$userId}_permissions");
-                return $this->respond($userId, 200);
-            } else {
-                return $this->failNotFound(lang('Admin.user.msg.msg_get_fail'));
-            }
-        }
-        return $this->fail(lang('Admin.IdNotFound'));
+        if (! $userId) return $this->pageNotFound();
+        $users = model('UserModel');
+        $user = $users->findById((int) $userId);
+        if ($user && ! $user->inGroup('superadmin')) {
+            $users->delete((int) $userId, true);
+            cache()->delete("{$userId}_groups");
+            cache()->delete("{$userId}_permissions");
+            return $this->successfulResponse($userId);
+        } 
+        return $this->pageNotFound();
     }
 
     /**
@@ -260,33 +258,33 @@ final class Manage extends AdminController
     /**
      * Get resource data Groups.
      */
-    public function getUserData(int $userId = 0): ResponseInterface 
+    public function getUserData(int $userId = 0): string 
     {
-        if (! $userId) { return $this->respond('[]', 200); }
+        if (! $userId) $this->successfulResponse([], true);
         $text = '';
         $relatеd = 'client';
         try {
-            $builder = $this->db->table(UserControl::TABLE)->where('user_id', $userId);
+            $builder = $this->db->table(self::USER_DETAILS_TABLE)->where('user_id', $userId);
             if (! $row = $builder->get()->getRow()) { 
-                return $this->respond('[]', 200); 
+                $this->successfulResponse([], true);
             }
         } catch (Throwable $th) {
-            return $this->respond('[]', 200);
+            $this->successfulResponse([], true);
         }
 
         $relatеd = $row->{self::COL_RELATED};
-        $text = $this->decrypt($row->{UserControl::COL_DATA});
-        unset($row->{self::COL_RELATED}, $row->{UserControl::COL_DATA}, $row);
+        $text = $this->decrypt($row->data);
+        unset($row->{self::COL_RELATED}, $row->data, $row);
         $data = [];
 
         if (! $text) {
-            $fields = $this->getFieldsUserData($relatеd); //$this->db->getFieldNames(UserControl::TABLE);
+            $fields = $this->getFieldsUserData($relatеd); //$this->db->getFieldNames(self::USER_DETAILS_TABLE);
             foreach ($fields as $key => $field) {
                 $data[$key] = $field['value'];
                 unset($fields[$key]);
             }
             unset($fields);
-            return $this->respond(jsonEncode($data, false), 200);
+            return $this->successfulResponse($data, true);
         }
 
         $tmpData = jsonDecode($text);
@@ -304,7 +302,7 @@ final class Manage extends AdminController
             $data[$key] = $row['value'];
             unset($row['value'], $tmpData[$key]);
         }
-        return $this->respond(jsonEncode($data, false), 200);
+        return $this->successfulResponse($data, true);
     }
 
     private function getFieldsUserData(string $releted): array
@@ -352,9 +350,9 @@ final class Manage extends AdminController
                 if ($row = $builder->get()->getRowArray()) { return $row; }
                 return [];
             } 
-            $builder = $builder->join(UserControl::TABLE, UserControl::TABLE . '.user_id = users.id')
+            $builder = $builder->join(self::USER_DETAILS_TABLE, self::USER_DETAILS_TABLE . '.user_id = users.id')
                 ->where('users.deleted_at', null)
-                ->where(UserControl::TABLE . '.' . self::COL_RELATED, $releted)
+                ->where(self::USER_DETAILS_TABLE . '.' . self::COL_RELATED, $releted)
                 ->orderBy('auth_groups_users.group');
             return $builder->get()->getResult('array');
         }
@@ -365,8 +363,11 @@ final class Manage extends AdminController
     {
         if (! $userId) { return 'client'; }
         try {
-            $builder = $this->db->table(UserControl::TABLE)->select(self::COL_RELATED)->where('user_id', (int) $userId);
-            if (! $row = $builder->get()->getRowArray()) { return 'client'; }
+            $builder = $this->db->table(self::USER_DETAILS_TABLE)
+                ->select(self::COL_RELATED)
+                ->where('user_id', (int) $userId);
+
+            if (! $row = $builder->get()->getRowArray()) return 'client';
             return (string) array_shift($row);
         } catch (Throwable $th) {
             return 'client';

@@ -2,16 +2,12 @@
 namespace Sygecon\AdminBundle\Controllers\Api;
 
 use CodeIgniter\Controller;
-use CodeIgniter\HTTP\ResponseInterface;
-use CodeIgniter\API\ResponseTrait;
 use Sygecon\AdminBundle\Config\Paths;
 use Throwable;
 
 final class AspIcons extends Controller
 {
-    use ResponseTrait;
-
-    public function me_fa(): ResponseInterface
+    public function me_fa(): string
     {
         $result = $this->getDir('solid', 'fas-');
         $buffer = $this->getDir('regular', 'far-');
@@ -30,32 +26,42 @@ final class AspIcons extends Controller
             unset($buffer[$key]);
         }
         unset($buffer);
-        return $this->respond(jsonEncode($result, false), 200);
+        return $this->successfulResponse($result);
     }
 
-    public function me_fab(): ResponseInterface 
+    public function me_fab(): string 
     {
-        return $this->respond(jsonEncode($this->getDir('brands', 'fab-'), false), 200);
+        return $this->successfulResponse(
+            $this->getDir('brands', 'fab-')
+        );
     }
 
-    public function me_far(): ResponseInterface 
+    public function me_far(): string 
     {
-        return $this->respond(jsonEncode($this->getDir('regular', 'far-'), false), 200);
+        return $this->successfulResponse(
+            $this->getDir('regular', 'far-')
+        );
     }
 
-    public function me_fas(): ResponseInterface 
+    public function me_fas(): string 
     {
-        return $this->respond(jsonEncode($this->getDir('solid', 'fas-'), false), 200);
+        return $this->successfulResponse(
+            $this->getDir('solid', 'fas-')
+        );
     }
 
-    public function me_fam(): ResponseInterface 
+    public function me_fam(): string 
     {
-        return $this->respond(jsonEncode($this->getDir('main', 'fam-'), false), 200);
+        return $this->successfulResponse(
+            $this->getDir('main', 'fam-')
+        );
     }
 
-    public function me_faf(): ResponseInterface 
+    public function me_faf(): string 
     {
-        return $this->respond(jsonEncode($this->getDir('flags', 'faf-'), false), 200);
+        return $this->successfulResponse(
+            $this->getDir('flags', 'faf-')
+        );
     }
 
     private function getDir (string $dir, string $prep): array 
@@ -78,4 +84,10 @@ final class AspIcons extends Controller
 		}
 		catch (Throwable $fe) { return $result; }
     }
+
+    private function successfulResponse(mixed $response): string
+	{
+		if (! $this->request->isAJAX()) return jsonEncode($response, false);
+		return jsonEncode(['status' => 200, 'message' => $response], false);
+	}
 }

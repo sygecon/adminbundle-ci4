@@ -19,23 +19,60 @@ final class LibraryLoader
 
     public function __construct()
     {
+        $config = new App();
         try {
-            $configApp = new App();
-            $request = new CLIRequest($configApp);
-            $this->editor = new Compare();
+            $request = new CLIRequest($config);
         } catch (Throwable $th) {
             throw new \ErrorException('Error! ' . lang('Admin.error.notHavePermission'));
         }
-
         helper(['path', 'files', 'match']);
+
+        $this->editor   = new Compare();
     }
 
     public function build(array $data = []): void
     {
+        $lastProc = false;
         foreach($data as $name => $callback) {
-            if ($callback && is_numeric($callback) === false) { 
-                $callback .= 'Update';
-                if (method_exists($this, $callback) === false) { continue; }
+            if ($name === Config::IS_LAST_PROCESS) {
+                $lastProc = true;
+            } else {
+                $this->makeProc($name, $callback);
+            }
+        }
+        $this->frameworkUpdate($lastProc);
+    }
+
+    public function make(string $filter = '*'): void
+    {
+        $lastProc = false;
+        foreach(Config::AUTOLOADER as $name => $callback) {
+            if ($name === $filter || $filter === '*') {
+                if ($name === Config::IS_LAST_PROCESS) {
+                    $lastProc = true;
+                } else {
+                    $this->makeProc($name, $callback);
+                }
+            }
+        }
+        $this->frameworkUpdate($lastProc);
+    }
+
+    private function frameworkUpdate(bool $lastProc): void
+    {
+        if (! $lastProc) return;
+        try {
+            $this->systemUpdate();
+        } catch (Throwable $th) {
+            CLI::write('Error: ' . $th->getMessage());
+        }
+    }
+
+    private function makeProc(string $name, mixed $callback): void
+    {
+        if ($callback && is_numeric($callback) === false) { 
+            $callback .= 'Update';
+            if (method_exists($this, $callback) === true) { 
                 CLI::write('Performing file operations with the library: ' . $name);
                 $this->$callback($name);
             }
@@ -54,6 +91,7 @@ final class LibraryLoader
 
     private function publicUpdate(string $name): void
     {
+        return;
         $src    = Config::pathWithVendor($name) . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR;
         $dst    = ROOTPATH . 'public' . DIRECTORY_SEPARATOR;
         $list   = [
@@ -86,50 +124,63 @@ final class LibraryLoader
         }
 
         foreach ($data as $name) {
-            $this->copyFiles($srcPath . $name, $dstPath . $name, [], true, true, false);
+            if (is_dir($srcPath . $name)) {
+                $this->copyFiles($srcPath . $name, $dstPath . $name, [], true, true, false);
+            }
         }
     }
 
     // Copy Framework system files
-    private function systemUpdate(string $name): void
+    private function systemUpdate(): void
     {
+        $name = Config::IS_LAST_PROCESS;
         $this->editor->setPath($name, 'app');
         $vendorPath = Config::pathWithVendor($name);
         if (is_dir($vendorPath) === false) { return; }
         $rootPath = ROOTPATH;
+        $src = $vendorPath . DIRECTORY_SEPARATOR;
+        $dst = $rootPath;
 
+        // copy Config path
+        $srcApp = $src . basename(APPPATH) . DIRECTORY_SEPARATOR . 'Config';
+        $dstApp = APPPATH . 'Config';
+        createPath($dstApp);
+        $dstApp .= DIRECTORY_SEPARATOR;
+        $this->copyFiles($srcApp, $dstApp, Config::FILTER_FRAMEWORK_CONFIG, false, false, false);
+        
+        // copy System path
+        copyPath($src . 'system', $dst . 'system', false);
+        
         // Copy Root files
         $this->copyFiles($vendorPath, $rootPath, Config::FILTER_FILENAME, true, true, false);
-        
-        $vendorPath .= DIRECTORY_SEPARATOR;
         copy(
-            $vendorPath . 'public' . DIRECTORY_SEPARATOR . 'index.php', 
-            $rootPath . 'public' . DIRECTORY_SEPARATOR . 'index.php'
+            $src . 'public' . DIRECTORY_SEPARATOR . 'index.php', 
+            $dst . 'public' . DIRECTORY_SEPARATOR . 'index.php'
         );
-        copyPath($vendorPath . 'system', $rootPath . 'system');
-
-        $vendorPath .= basename(APPPATH) . DIRECTORY_SEPARATOR . 'Config';
-        $rootPath = APPPATH . 'Config' . DIRECTORY_SEPARATOR;
-        
-        $this->copyFiles($vendorPath, $rootPath, Config::FILTER_FRAMEWORK_CONFIG, false, false, false);
     }
 
     private function copyFiles(string $srcDir, string $dstDir, array $filter, bool $onlyFile, bool $notCompare, bool $deletePath): void
     {
-        if (! $handle = opendir($srcDir)) { return; }
-        while (($fileName = readdir($handle)) !== false) {
-            if ($fileName !== '.' && $fileName !== '..') {
-                $sourceFile = $srcDir . DIRECTORY_SEPARATOR . $fileName;
-                $destFile = $dstDir . $fileName;
+        $sourceDir  = rtrim($srcDir, '\\/ ');
+        $destDir    = rtrim($dstDir, '\\/ ') . DIRECTORY_SEPARATOR;
+        if (is_dir($sourceDir) === false) return;
 
-                if (is_dir($sourceFile) === true) {
-                    if ($onlyFile === false) { 
-                        CLI::write('Copying folder: ' . $fileName);
-                        if ($deletePath === true) deletePath($destFile, false);
-                        copyPath($sourceFile, $destFile); 
-                    }
-                } else
-                if ($notCompare === false &&$filter && isset($filter[$fileName]) === true) { 
+        foreach (new \DirectoryIterator($sourceDir) as $fileInfo) {
+            if ($fileInfo->isDot() === true) continue;
+
+            $fileName   = $fileInfo->getFilename();
+            $sourceFile = $sourceDir . DIRECTORY_SEPARATOR . $fileName;
+            $destFile   = $destDir . $fileName;
+
+            if ($fileInfo->isDir() === true) {
+                if ($onlyFile === false) { 
+                    CLI::write('Copying folder: ' . $fileName);
+                    if ($deletePath === true) deletePath($destFile, false);
+                    copyPath($sourceFile, $destFile); 
+                }
+            } else 
+            if ($fileInfo->isFile() === true) {
+                if ($notCompare === false && $filter && isset($filter[$fileName]) === true) { 
                     CLI::write('Comparison of configuration file data: ' . $fileName);
                     $this->editor
                         ->prepare(basename($fileName))
@@ -140,6 +191,5 @@ final class LibraryLoader
                 }
             }
         }
-        closedir($handle);
     }
 }

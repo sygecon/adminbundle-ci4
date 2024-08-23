@@ -54,8 +54,8 @@
 
 <!-- Section content -->
 <?= $this->section('scripts') ?>
-<script defer src="/control/assets/js/multiselect_move.<?= $valid_hash ?>.js"></script>
-<script defer src="/control/assets/js/aceEditor.<?= $valid_hash ?>.js"></script>
+<script defer src="/control/assets/js/multiselect_move-<?= $valid_hash ?>.js"></script>
+<script defer src="/control/assets/js/aceEditor-<?= $valid_hash ?>.js"></script>
 <script>
     AspBase.meActionSelect = function (option) {
         let action = option.action

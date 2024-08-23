@@ -35,12 +35,12 @@ final class PagesModel extends Model
         $id         = (int) 0;
         $parentId   = (int) 0;
         $langId     = (int) langIdFromName($langName);
-        if (isset($data['parent'])) { $parentId = (int) $data['parent']; }
-        if ($parentId === 0) { $data['menu_deny'] = (int) 0; } 
+        if (isset($data['parent'])) $parentId = (int) $data['parent'];
+        if ($parentId === 0) $data['menu_deny'] = (int) 0;
 
         // Попытка создания Ноды страницы
         $tree = new TreeSet(self::TREE_ID, $this->db);
-        if (! $nodeId = $tree->setNewNode($data, $isFirst)) { return (int) 0; }
+        if (! $nodeId = $tree->setNewNode($data, $isFirst)) return (int) 0;
 
         $data['node_id'] = (int) $nodeId;
         $data['language_id'] = $langId;
@@ -69,7 +69,7 @@ final class PagesModel extends Model
                 $i = (int) $val;
                 if ($i !== $langId) {
                     $data['language_id'] = $i;
-                    $this->insert($data);
+                    $e = $this->insert($data);
                 }
             }
         }

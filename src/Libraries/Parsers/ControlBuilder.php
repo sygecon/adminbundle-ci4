@@ -52,22 +52,68 @@ final class ControlBuilder {
     private const TYPE_CLASS      = ['personal', 'group', 'first'];
     private const FILTER_CLASS    = ['model', 'models', 'boot', 'controller', 'controllers', 'app', 'errors', 'admin', 'base', 'basecontroller', 'admincontroller', 'appcontroller', 'basecontroller'];
     
-    private const FORMAT_ROUTE    = "\n" . '$routes->get' . "('%s', '\\" . self::NAMESPACE . '\\' . self::CLASS_NAMESPACE . '\\' . "%s');"; 
-
     private const APP_ROUTE = APPPATH . 'Config' . DIRECTORY_SEPARATOR . 'Boot' . DIRECTORY_SEPARATOR . 'routes.php';
 
-    private string $prefix = '';
+    private const ROUTE_PREFIX_LANG = '{locale}/';
+    private const ROUTE_FORMAT      = '$routes->get' . "('%s', [%s::class, '%s']);\n";
+    public const ROUTE_CALLBACK     = ['index', 'list'];
+    
+    private bool $addOneRoute       = true;
+    private bool $multiLang         = false;
 
-    private $titleTab = null;
+    private string $prefix          = '';
 
-    /** Param String $Prefix */
+    private $titleTab               = null;
+
+    /* Param String $Prefix */
     public function __construct(?string $prefix = null) 
     {
         helper('path');
+
+        $this->addOneRoute  = true;
+        $this->multiLang    = false;
+        if (defined('SUPPORTED_LOCALES') && is_array(SUPPORTED_LOCALES) && count(SUPPORTED_LOCALES) > 1) {
+            $this->multiLang = true;
+            if (defined('DEFAULT_LANGUAGE_IS_EMPTY')) {
+                $this->addOneRoute = DEFAULT_LANGUAGE_IS_EMPTY;
+            }
+        }
+
         if ($prefix !== null) { $this->prefix = $prefix; }
     }
 
-    //Наименование из базы как Контроллер 
+    public function meLinkToRoute(string $slug = '', string $control = '', string $callback = 'index', string $segment = ''): string 
+    {
+        $result = '';
+        if (! $control) return $result;
+        
+        if (! $callback) {
+            $callback = (! $segment ? self::ROUTE_CALLBACK[0] : self::ROUTE_CALLBACK[1]);
+        } else 
+        if (! $segment && $callback !== self::ROUTE_CALLBACK[0]) {
+            $segment = '(:any)';
+        }
+        if ($segment) $callback .= '/$1';
+        
+        $contrl = '\\' . self::NAMESPACE . '\\' . self::CLASS_NAMESPACE . '\\' . $control;
+        
+        if ($this->addOneRoute === true) {
+            $class = $slug;
+            if ($segment) $class .= '/';
+            $class .= $segment;
+            $result .= sprintf(self::ROUTE_FORMAT, $class, $contrl, $callback);
+        }
+
+        if ($this->multiLang) {
+            $class = self::ROUTE_PREFIX_LANG . $slug;
+            if ($slug && $segment) $class .= '/';
+            $class .= $segment;
+            $result .= sprintf(self::ROUTE_FORMAT, $class, $contrl, $callback);
+        }
+        return $result;
+    }
+
+    /* Наименование из базы как Контроллер  */
     public function baseToName(string $name = '', string $sep = '|'): string 
     {
         return trim(str_replace('_', $sep, $name), $sep . ' ');
@@ -202,30 +248,34 @@ final class ControlBuilder {
         } catch (Throwable $th) { return false; }
     }
 
-    // Добавление Url в файл Роутера
-    public function addUrlToRoute(string $url = '', string $name = '', string $suffix = ''): void 
+    /* Добавление Url в файл Роутера  */
+    public function addUrlToRoute(string $url = '', string $name = '', string $suffix = '', bool $isList = true): void 
     {
-        if ($name && ! in_array(strtolower($name), self::FILTER_CLASS)) {
-            if (! $class = str_replace('/', '\\', toClassUrl(trim($name, '/\\'), $suffix))) { return; }
-            $change = false;
-            $url = trim(toUrl($url), '/ ');
-            $dataRoute = readingDataFromFile(self::APP_ROUTE);
-            if (mb_strpos($dataRoute, chr(39) . $url . chr(39)) === false) { 
-                $dataRoute .= sprintf(self::FORMAT_ROUTE, $url, $class . '::index');
-                $change = true; 
-            }
-            if (mb_strpos($dataRoute, chr(39) . $url . '/') === false) { 
-                $dataRoute .= sprintf(self::FORMAT_ROUTE, $url . '/(:any)', $class . '::view/$1');
-                $change = true;
-            }
-            if ($change === true) {
-                $dataRoute .= "\n";
-                writingDataToFile(self::APP_ROUTE, $dataRoute, false); 
-            }
+        if (! $name) return;
+        if (in_array(strtolower($name), self::FILTER_CLASS)) return;
+        if (! $class = str_replace('/', '\\', toClassUrl(trim($name, '/\\'), $suffix))) return; 
+
+        $url        = trim(toUrl($url), '/ ');
+        $dataRoute  = readingDataFromFile(self::APP_ROUTE);
+        $change     = false;
+
+        if (mb_strpos($dataRoute, chr(39) . $url . chr(39)) === false) { 
+            $dataRoute .= $this->meLinkToRoute($url, $class, self::ROUTE_CALLBACK[0]);
+            $change = true; 
+        }
+
+        if ($isList === true && mb_strpos($dataRoute, chr(39) . $url . '/') === false) { 
+            $dataRoute .= $this->meLinkToRoute($url, $class, self::ROUTE_CALLBACK[1]);
+            $change = true;
+        }
+
+        if ($change === true) {
+            $dataRoute .= "\n";
+            writingDataToFile(self::APP_ROUTE, $dataRoute, false); 
         }
     }
 
-    // Удаление Url из файла Роутера
+    /* Удаление Url из файла Роутера  */
     public function removeUrlToRoute(string $url = ''): void 
     {
         $url = trim($url, '/ ');
@@ -266,7 +316,7 @@ final class ControlBuilder {
             $result = ['class' => '', 'file' => '', 'type' => '', 'level' => 0];
             $listLink = explode('/', $this->checkUrl($url));
             if (count($listLink) === 1 && empty($listLink[0])) { return $result; }
-            $filtrClass = [$this->isFullClass($listLink), $this->isFullClass($listLink, true), $this->isFullClass($listLink, false)];
+            $filtrClass = [$this->isFullClass($listLink, null), $this->isFullClass($listLink, true), $this->isFullClass($listLink, false)];
         }
         $needle = '\\' . self::CLASS_NAMESPACE . '\\' . self::NEEDLE_CLASS . '\\';
         $levelParent = substr_count('\\', trim(self::NAMESPACE, '\\') . '\\' . trim(self::CLASS_NAMESPACE, '\\') . '\\');
@@ -327,11 +377,16 @@ final class ControlBuilder {
     private function urlToClass($links): string 
     {
         $class = '';
-        if (is_array($links)) { $array = $links; } 
-        else if (is_string($links)) { $array = explode('/', $links); }
+        if (is_array($links)) { 
+            $array = $links; 
+        } else 
+        if (is_string($links)) { 
+            $array = explode('/', $links); 
+        }
 
-        if (count($array) === 1 && empty($array[0])) { unset($array[0], $array); } 
-        else {
+        if (count($array) === 1 && empty($array[0])) { 
+            unset($array[0], $array); 
+        } else {
             $len = count($array);
             --$len;
             foreach ($array as $i => $link) {
@@ -346,40 +401,43 @@ final class ControlBuilder {
         return (!$class) ? $this->prefix . 'Index' : trim($class, '\\');
     }
 
-    private function isClass(array &$listLink = [], ?bool $isParentPath = null): string 
+    private function isClass(array &$listLink, ?bool $isParentPath): string 
     {
-        if (! $len = count($listLink)) { return $this->prefix . 'Index'; }
-        if ($isParentPath === false) { return $this->urlToClass([$listLink[0]]); }
+        if (! $len = count($listLink)) return $this->prefix . 'Index';
+        if ($isParentPath === false) return $this->urlToClass([$listLink[0]]); 
         --$len;
         $links = $listLink;
-        if ($isParentPath === true) { unset($links[$len]); }
+        if ($isParentPath === true) unset($links[$len]);
         return $this->urlToClass($links);
     }
 
-    private function isFullClass(array &$listLink = [], ?bool $isParentPath = null): string 
+    private function isFullClass(array &$listLink, ?bool $isParentPath): string 
     {
         $class = $this->isClass($listLink, $isParentPath);
         return (empty($class) ? self::NAMESPACE . '\\' . self::CLASS_NAMESPACE : self::NAMESPACE . '\\' . self::CLASS_NAMESPACE . '\\' . $class);
     }
 
-    private function checkUrl(string $url = '', string $typeClass = self::CLASS_NAMESPACE, string $suffix = ''): string 
+    private function checkUrl(string $url): string 
     {
-        if (! $url = toClassUrl($url, $suffix)) { return ''; }
+        if (! $url = toClassUrl($url, '')) return '';
+
+        $typeClass = self::CLASS_NAMESPACE;
         $len = strlen(self::NAMESPACE) + 1;
-        if (substr($url, 0, $len) === self::NAMESPACE . '/') { $url = substr($url, $len); }
+        if (substr($url, 0, $len) === self::NAMESPACE . '/') $url = substr($url, $len);
         $len = strlen($typeClass);
         ++$len;
-        if (substr($url, 0, $len) === $typeClass . '/') { $url = substr($url, $len); }
-        if (substr($url, 0, strlen(self::NEEDLE_CLASS)) === self::NEEDLE_CLASS) { return ''; }
+
+        if (substr($url, 0, $len) === $typeClass . '/') $url = substr($url, $len);
+        if (substr($url, 0, strlen(self::NEEDLE_CLASS)) === self::NEEDLE_CLASS) return '';
         return trim($url, '/');
     }
 
-    private function classToName(string $class = ''): string 
+    private function classToName(string $class): string 
     {
         return str_replace('\\', '|', trim(substr($class, strlen(self::NAMESPACE . '\\' . self::CLASS_NAMESPACE . '\\')), '\\' . ' '));
     }
 
-    private function createController(string $name = '', string $model = ''): bool 
+    private function createController(string $name, string $model): bool 
     {
         if ($name === '') { return false; }
         $command = 'make:app-controller ' . $name;
@@ -390,13 +448,13 @@ final class ControlBuilder {
         } catch (Throwable $th) { return false; }
     }
 
-    // Хранение в Базе / Файл Макета
-    // private function nameToBase(string $name = ''): string 
-    // {
-    //     return trim(str_replace(['|', '/', '\\'], '_', $name), '_ ');
-    // }
-
-    // Removing lines from text
+    /* Хранение в Базе / Файл Макета
+        private function nameToBase(string $name = ''): string 
+        {
+            return trim(str_replace(['|', '/', '\\'], '_', $name), '_ ');
+        }
+        Removing lines from text
+    */
     private function removingLinesFromText(string $search, string &$data, bool &$result): void
     {
         while ($pos = mb_strpos($data, $search)) {
@@ -413,7 +471,7 @@ final class ControlBuilder {
         }
     }
 
-    // Delete string with Class Controller from file Route
+    /* Delete string with Class Controller from file Route */
     public function removeClassFromRoute(string $name): void 
     {
         if (! $class = toClassUrl(trim($name, '/\\'))) { return; }
@@ -427,7 +485,7 @@ final class ControlBuilder {
         if ($write === true) { writingDataToFile(self::APP_ROUTE, $dataRoute, false); }
     }
 
-    // Url class to File Name
+    /* Url class to File Name */
     private function urlToFileName(string $url): string
     {
         if (! $url) { return ''; }
@@ -442,6 +500,6 @@ final class ControlBuilder {
     private function checkClassName(string $className): bool
     {
         if (! $str = strtolower(toClassUrl($className))) { return false; }
-        return (bool) (in_array($str, Paths::FILTER_CLASS_NAME) === false);
+        return (bool) (in_array($str, Paths::FORBID_CLASS_NAMES) === false);
     }
 }

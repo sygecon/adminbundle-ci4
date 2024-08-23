@@ -87,11 +87,11 @@
 
 <!-- Section styles -->
 <?= $this->section('styles') ?>
-    <link href="/control/assets/css/iconpicker-<?= $valid_hash ?>.css" rel="stylesheet">
+    
 <?= $this->endSection() ?>
 
 <!-- Section content -->
 <?= $this->section('scripts') ?>
-    <script defer src="/control/assets/js/iconpicker.<?= $valid_hash ?>.js"></script>
+    <script defer src="/control/assets/js/iconpicker-<?= $valid_hash ?>.js"></script>
     <script defer src="/assets/js/components/asp.query.post.js"></script>
 <?= $this->endSection() ?>

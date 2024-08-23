@@ -50,7 +50,8 @@ class PermissionFilter implements FilterInterface
                 $error = $user->getBanMessage() ?? lang('Auth.logOutBannedUser');
                 $authenticator->logout();
 
-                return redirect()->to(config('Auth')->logoutRedirect())
+                return redirect()
+                    ->to(config('Auth')->logoutRedirect())
                     ->with('error', $error);
             }
 

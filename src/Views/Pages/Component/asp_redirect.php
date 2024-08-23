@@ -20,7 +20,7 @@
         </div>
     </div>
     <!-- /.card-body -->
-    <div class="card-footer" asp-box="btn"></div>
+    <div class="card-footer"></div>
     <!-- /.card-footer-->
 </div>
 <!-- /.card-->
@@ -28,11 +28,10 @@
 
 <!-- Section styles -->
 <?= $this->section('styles') ?>
-    <link href="/control/assets/css/treemodal-<?= $valid_hash ?>.css" rel="stylesheet">
 <?= $this->endSection() ?>
 
 <!-- Section content -->
 <?= $this->section('scripts') ?>
-    <script defer src="/control/assets/js/treemodal.<?= $valid_hash ?>.js"></script>
-    <script defer src="/control/assets/js/aceEditor.<?= $valid_hash ?>.js"></script>
+    <script defer src="/control/assets/js/treemodal-<?= $valid_hash ?>.js"></script>
+    <script defer src="/control/assets/js/aceEditor-<?= $valid_hash ?>.js"></script>
 <?= $this->endSection() ?>

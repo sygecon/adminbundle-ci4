@@ -11,10 +11,10 @@ return [
     'editTitle'     => 'Редактор',
     'editorTitle'   => 'Редактор кода',
     'editorHTML'    => 'HTML Редактор',
-    'default'   => 'По умолчанию',
-    'type'      => 'Тип',
-    'page'      => 'Страница',
-    'list'      => 'Список страниц',
+    'default'       => 'По умолчанию',
+    'type'          => 'Тип',
+    'page'          => 'Страница',
+    'list'          => 'Список страниц',
     'changePassword'        => 'Изменить пароль',
     'changePasswordTitle'   => 'Изменение пароля пользователя',
     'newPassword'           => 'Новый пароль',
@@ -174,6 +174,8 @@ return [
             'importDataDesc' => 'Импорт текстовых данных',
             'importResourcesName' => 'Ресурсы',
             'importResourcesDesc' => 'Импорт ресурсов (стили, скрипты, изображения ...)',
+            'projectStructureName' => "Каркас проекта",
+            'projectStructureDesc' => "Каркас проекта",
         ]
     ],
     // Пользователи

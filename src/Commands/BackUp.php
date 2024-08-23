@@ -66,7 +66,7 @@ class BackUp extends BaseCommand
         if (! isset(Config::DB_TYPE[$driver])) { return; }
         $class = Config::PREFIX_DUMPER_DB . Config::DB_TYPE[$driver];
 
-        if (! class_exists($class)) { return; }
+        if (class_exists($class) === false) { return; }
         
         $dumpFile = strtolower($base['database']) . '_' . ($driver) . '.sql';
         $dump = new $class($base);

@@ -1,6 +1,5 @@
 <?php namespace Sygecon\AdminBundle\Controllers\Catalog;
 
-use CodeIgniter\HTTP\ResponseInterface;
 use Sygecon\AdminBundle\Controllers\AdminController;
 use Sygecon\AdminBundle\Models\Catalog\PagesModel;
 use Sygecon\AdminBundle\Models\Component\SheetModel;
@@ -12,16 +11,14 @@ final class PageEditor extends AdminController {
     protected const ICON = 'file-earmark-code';
 
     // Вывод данных страницы
-    public function index(string $lang = APP_DEFAULT_LOCALE, int $id = 0): ResponseInterface
+    public function index(string $lang = APP_DEFAULT_LOCALE, int $id = 0): string
 	{
         ignore_user_abort(true);
         set_time_limit(0);
         $data['lang'] = strtolower($lang);
         if (! isset(SUPPORTED_LOCALES[$data['lang']])) { $data['lang'] = APP_DEFAULT_LOCALE; }
 
-        if (! $data['data'] = $this->getPage($lang, (int) $id)) { 
-            return $this->fail(lang('Admin.IdNotFound')); 
-        }
+        if (! $data['data'] = $this->getPage($lang, (int) $id)) return $this->pageNotFound(); 
         
         $data['head'] = [
             'icon' => self::ICON, 
@@ -31,40 +28,33 @@ final class PageEditor extends AdminController {
             'link' => CatVar::CURRENT_LINK . '/' . $lang . '/' . (int) $data['data']->{'parent'}
         ]; 
         unset($data['data']->breadcrumb);
-        return $this->respond($this->build('page_editor', $data, 'Catalog'), 200);
+        return $this->build('page_editor', $data, 'Catalog');
     }
 
     // Изменение данных страницы
-    public function update(int $idPage = 0, string $sheet = '', string $lang = '', int $idNode = 0): ResponseInterface
+    public function update(int $idPage = 0, string $sheet = '', string $lang = '', int $idNode = 0): string
 	{
         ignore_user_abort(true);
         set_time_limit(0);
-        if (! $data = $this->request->getRawInput()) {
-            return $this->fail(lang('Admin.IdNotFound'));
-        }
+        if (! $data = $this->request->getRawInput()) return $this->pageNotFound();
 
         if ($sheet === 'announce' && array_key_exists('_summary_', $data)) {
             $model = new PagesModel();
-
-            $result = $model->saveData($idPage, [
+            return $this->successfulResponse($model->saveData($idPage, [
                 'summary' => $data['_summary_'], 'updated_at' => meDate()
-            ]);
-            return $this->respond($result, 200);
+            ]));
         }
 
         helper('model');
-        if (! $modelName = getClassModelName($sheet)) {
-            return $this->fail(lang('Admin.IdNotFound'));
-        }
-        if (enum_exists($modelName, false)) { return $this->fail(lang('Admin.IdNotFound')); }
+        if (! $modelName = getClassModelName($sheet)) return $this->pageNotFound();
+        if (enum_exists($modelName, false)) return $this->pageNotFound();
 
         $model = new $modelName();
-        $result = $model->setData((int) $idPage, $data);
-        return $this->respond($result, 200);
+        return $this->successfulResponse($model->setData((int) $idPage, $data));
     }
 
     //Tree Catalog TinyMCE
-    public function getCatalog(string $lang = APP_DEFAULT_LOCALE, int $id = 0, int $nodeId = 0): ResponseInterface
+    public function getCatalog(string $lang = APP_DEFAULT_LOCALE, int $id = 0, int $nodeId = 0): string
     {
         $data = [];
         if ($id && $lang && $this->request->isAJAX()) {
@@ -79,7 +69,7 @@ final class PageEditor extends AdminController {
             }
             $data = CatVar::dataForHtmlEditor($lang, $nodeId, $onlyPath);
         }
-        return $this->respond(jsonEncode($data, false), 200);
+        return $this->successfulResponse($data, true);
     }
 
     protected function getPage(string $lang, int $id): ?object

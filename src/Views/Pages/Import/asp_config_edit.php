@@ -36,7 +36,7 @@
 
 <!-- Section content -->
 <?= $this->section('scripts') ?>
-    <script defer src="/control/assets/js/aceEditor.<?= $valid_hash ?>.js"></script>
+    <script defer src="/control/assets/js/aceEditor-<?= $valid_hash ?>.js"></script>
     <script>
         const CARRYOVER_JSON = function(objJSON) {
             if (objJSON && typeof objJSON === "object") {
@@ -49,6 +49,7 @@
             return new Promise(function (resolve) {
                 AspBase.fetch('template', "JSON", "GET")
                     .then(function (config) {
+                        console.log(config);
                         const BODY = document.querySelector(".card-body"),
                             EDITOR = ace.edit(BODY.querySelector(".ace_editor"));
                         if (EDITOR && typeof EDITOR !== "undefined") {

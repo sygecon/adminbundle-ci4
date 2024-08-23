@@ -2,8 +2,6 @@
 namespace Sygecon\AdminBundle\Controllers\Api;
 
 use CodeIgniter\Controller;
-use CodeIgniter\HTTP\ResponseInterface;
-use CodeIgniter\API\ResponseTrait;
 use Sygecon\AdminBundle\Config\Paths;
 use Sygecon\AdminBundle\Config\PageTypes;
 
@@ -42,10 +40,8 @@ use function closedir;
 use function rename;
 //use function getPathTheme;
 
-final class AspFm extends Controller {
-    
-    use ResponseTrait;
-
+final class AspFm extends Controller 
+{
     protected string $link = '';
     protected string $path = '';
     protected string $type = '';
@@ -56,15 +52,15 @@ final class AspFm extends Controller {
 
     protected $helpers = ['files'];
 
-    public function initController(
-        \CodeIgniter\HTTP\RequestInterface $request,
-        \CodeIgniter\HTTP\ResponseInterface $response,
-        \Psr\Log\LoggerInterface $logger
-    ) {
-        parent::initController($request, $response, $logger);
-    }
+    // public function initController(
+    //     \CodeIgniter\HTTP\RequestInterface $request,
+    //     \CodeIgniter\HTTP\ResponseInterface $response,
+    //     \Psr\Log\LoggerInterface $logger
+    // ) {
+    //     parent::initController($request, $response, $logger);
+    // }
 
-    public function me_files(): ResponseInterface 
+    public function me_files(): string
     {
         $fileData = ['folders' => [], 'files' => []];
         if ($this->getRequest()) {
@@ -72,21 +68,21 @@ final class AspFm extends Controller {
             if (isset($this->postData['get_filter']))
                 $fileData['filter'] = PageTypes::FILE_FILTER_EXT;
         }
-        return $this->respond(jsonEncode($fileData, false), 200);
+        return $this->successfulResponse($fileData, true);
     }
 
-    public function me_rename(): ResponseInterface 
+    public function me_rename() 
     {
         if ($this->getRequest()) {
             if (isset($this->postData['fname']) && isset($this->postData['fname_new'])) {
                 $result = renameFile($this->path, $this->postData['fname'], $this->postData['fname_new']);
-                return $this->respond(($result ? $result : false), 200);
+                return $this->successfulResponse($result ? $result : false);
             }
         }
-        return $this->respond(false, 200);
+        return $this->successfulResponse(false);
     }
 
-    public function me_copy(): ResponseInterface 
+    public function me_copy(): string 
     {
         $fileData = [];
         if ($this->getRequest()) {
@@ -120,10 +116,10 @@ final class AspFm extends Controller {
                 }
             }
         }
-        return $this->respond(jsonEncode($fileData, false), 200);
+        return $this->successfulResponse($fileData, true);
     }
 
-    public function me_upload(): ResponseInterface 
+    public function me_upload(): string 
     {
         $fileData = [];
         helper('request');
@@ -152,23 +148,23 @@ final class AspFm extends Controller {
                 unset($this->postData['fdata'], $this->postData['fname']);
             }
         }
-        return $this->respond(jsonEncode($fileData, false), 200);
+        return $this->successfulResponse($fileData, true);
     }
 
-    public function me_delete(): ResponseInterface 
+    public function me_delete(): bool 
     {
         if ($this->getRequest()) {
             if (is_array($this->postData['fname'])) {
                 foreach ($this->postData['fname'] as $fname) {
                     deletePath($this->path . DIRECTORY_SEPARATOR . $fname);
                 }
-                return $this->respond(true, 200);
+                return $this->successfulResponse(true);
             }
         }
-        return $this->respond(false, 200);
+        return $this->successfulResponse(false);
     }
 
-    public function me_create(): ResponseInterface 
+    public function me_create() 
     {
         if ($this->getRequest()) {
             if (isset($this->postData['fname'])) {
@@ -178,30 +174,34 @@ final class AspFm extends Controller {
                     if (isset($this->postData['ext'])) {
                         $name .= '.' . strtolower(checkFileName($this->postData['ext']));
                         unset($this->postData['ext']);
-                        if (createFile($this->path . DIRECTORY_SEPARATOR . $name))
-                            return $this->respond($this->link . $name, 200);
+                        if (createFile($this->path . DIRECTORY_SEPARATOR . $name, '')) {
+                            return $this->successfulResponse($this->link . $name);
+                        }
                     } else {
-                        return $this->respond(createPath($this->path . DIRECTORY_SEPARATOR . $name), 200);
+                        return $this->successfulResponse(createPath($this->path . DIRECTORY_SEPARATOR . $name));
                     }
                 }
             }
         }
-        return $this->respond(false, 200);
+        return $this->successfulResponse(false);
     }
 
     private function getPath(string $path = ''): string 
     {
-        if (! $this->type) { return ''; }
+        if (! $this->type) return '';
 
         $curPath = FCPATH;
         $this->isUser = false;
 
-        if (! $this->postData['pip']) { return $curPath; }
+        if (! $this->postData['pip']) return $curPath;
 
         $buf = cleaningText($this->postData['pip']);
         if ($buf !== SLUG_ADMIN) { /// ! Если не из админки ...
             $id = user_id();
-            if (isset($id) && $id) $curPath = Paths::user($id);
+            if (isset($id) === true && $id && is_numeric($id) === true) 
+                $curPath = Paths::byUserID((int) $id);
+            else
+                return '';
         }
 
         // helper('path');
@@ -318,4 +318,11 @@ final class AspFm extends Controller {
         }
         return false;
     }
+
+    private function successfulResponse(mixed $response, bool $IsEncode = false): string
+	{
+		$result = ($IsEncode === true ? jsonEncode($response, false) : $response);
+        if (! $this->request->isAJAX()) return $result;
+		return jsonEncode(['status' => 200, 'message' => $result], false);
+	}
 }

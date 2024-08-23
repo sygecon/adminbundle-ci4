@@ -2,19 +2,15 @@
 namespace Sygecon\AdminBundle\Controllers\Api;
 
 use CodeIgniter\Controller;
-use CodeIgniter\API\ResponseTrait;
-use CodeIgniter\HTTP\ResponseInterface;
 
 final class AspSeo extends Controller
 {
-    use ResponseTrait;
-
-    public function me_build(): ResponseInterface
+    public function me_build(): string
     {
         if (auth()->loggedIn() && $this->request->isAJAX()) {
             command('make:seobuild');
-            return $this->respond('1', 200);
+            return jsonEncode(['status' => 200, 'message' => '1'], false);
         }
-        return $this->respond('0', 200);
+        return '0';
     }
 }

@@ -14,38 +14,37 @@ final class Block extends AdminController {
         $this->model = new BaseModel();
     }
 
-    public function index(int $id = 0) {
-        if ($this->request->getMethod() !== 'get') {
-            return $this->fail(lang('Admin.IdNotFound'));
+    public function index(int $id = 0): string 
+    {
+        if (strtolower($this->request->getMethod()) !== 'get') {
+            return $this->pageNotFound();
         }
         if ($id) {
-            return $this->respond($this->build('block_edit', $this->edit($id), 'Component'), 200);
+            return $this->build('block_edit', $this->edit($id), 'Component');
         }
 
         if ($this->request->isAJAX()) {
             if ($data = $this->model->findAll('updated_at', false)) {
-                return $this->respond(jsonEncode($data, false), 200);
+                return $this->successfulResponse($data);
             }
-            return $this->respond('[]', 200);
+            return $this->successfulResponse([]);
         }
         
-        return $this->respond($this->build('block', 
+        return $this->build('block', 
             ['head' => ['icon' => 'grid', 'title' => lang('Admin.menu.sidebar.blocksDesc')]]
-        , 'Component'), 200);
+        , 'Component');
     }
     /**
      * Create a new resource object, from "posted" parameters.
      * @return array an array
      */
-    public function create() {
+    public function create(): string
+    {
         $dataPost = $this->postDataValid($this->request->getPost());
-        if (isset($dataPost['name'])) {
-            if (!$id = $this->model->insert($dataPost)) {
-                return $this->fail($this->model->errors());
-            }
-            return $this->respondCreated($id, lang('Admin.navbar.msg.msg_insert')); //
+        if (isset($dataPost['name']) && $dataPost['name']) {
+            if ($id = $this->model->insert($dataPost)) return $this->successfulResponse($id);
         }
-        return $this->fail(lang('Admin.IdNotFound'));
+        return $this->pageNotFound();
     }
 
     /**
@@ -53,59 +52,61 @@ final class Block extends AdminController {
      * @param int $id
      * @return array an array
      */
-    public function update(int $id = 0) {
-        if (!$id) return $this->fail(lang('Admin.IdNotFound'), 400);
+    public function update(int $id = 0): string
+    {
+        if (! $id) return $this->pageNotFound();
         $data = $this->request->getRawInput();
-        if (!$data) return $this->fail(lang('Admin.IdNotFound'));
+        if (! $data) return $this->pageNotFound();
         if (isset($data['is_select'])) {
             unset($data['is_select']);
             if (isset($data['sheet_name']) || isset($data['type'])) {
-                if (!$this->model->update($id, $data)) {
-                    return $this->fail(lang('Admin.IdNotFound'));
+                if (! $this->model->update($id, $data)) {
+                    return $this->pageNotFound();
                 }
             }
         } else {
             $oldData = $this->model->find((int)$id, 'name');
             if (!isset($oldData) || !$oldData) {
-                return $this->fail(lang('Admin.IdNotFound'));
+                return $this->pageNotFound();
             }
             if (isset($data['data_html_control'])) { //! Сохраниение формы редактирования данных страницы
-                if (!$this->model->update($id, ['direct_tmpl' => htmlspecialchars(trim($data['data_html_control']))])) {
-                    return $this->fail(lang('Admin.IdNotFound'));
+                if (!$this->model->update($id, [
+                    'direct_tmpl' => htmlspecialchars(trim($data['data_html_control']))
+                ])) {
+                    return $this->pageNotFound();
                 }
                 unset($data['data_html_control']);
-            } else if (isset($data['data_html'])) { //! Сохраниение формы редактирования данных страницы
+            } else 
+            if (isset($data['data_html'])) { //! Сохраниение формы редактирования данных страницы
                 helper('path');
-                if (writingDataToFile(templateFile(PATH_BLOCK . DIRECTORY_SEPARATOR . $oldData->name), $data['data_html']) === false) {
-                    return $this->fail(lang('Admin.IdNotFound'));
+                if (writingDataToFile(
+                    templateFile(PATH_BLOCK . DIRECTORY_SEPARATOR . $oldData->name), $data['data_html']
+                ) === false) {
+                    return $this->pageNotFound();
                 }
                 unset($data['data_html']);
             } else {
                 $data = $this->postDataValid($data);
-                if (!isset($data['name'])) {
-                    return $this->fail(lang('Admin.IdNotFound'));
-                }
-                if (!$this->model->update($id, $data)) {
-                    return $this->fail(lang('Admin.IdNotFound'));
-                }
+                if (! isset($data['name'])) return $this->pageNotFound();
+                if (! $this->model->update($id, $data)) return $this->pageNotFound();
                 if ($oldData->name !== $data['name']) {
                     helper('files');
                     renameFile(APPPATH . toPath(PATH_TEMPLATE . DIRECTORY_SEPARATOR . PATH_BLOCK), $oldData->name . '.php', $data['name']);
                 }
             }
         }
-        return $this->respondUpdated($id, lang('Admin.navbar.msg.msg_update'));
+        return $this->successfulResponse($id);
     }
     /**
      * Delete the designated resource object from the model.
      * @param int $id
      */
-    public function delete(int $id = 0) {
-        if (!$id) return $this->fail(lang('Admin.IdNotFound'), 400);
-        if (!$this->model->delete($id)) {
-            return $this->failNotFound(lang('Admin.navbar.msg.msg_get_fail'));
+    public function delete(int $id = 0): string
+    {
+        if ($id && $this->model->delete($id)) {
+            return $this->successfulResponse($id);
         }
-        return $this->respondDeleted($id, lang('Admin.navbar.msg.msg_delete'));
+        return $this->pageNotFound();
     }
     
     // Редактор данных PHP 
@@ -114,7 +115,8 @@ final class Block extends AdminController {
      * @param int $id
      * @return array an array
      */
-    private function edit(int $id = 0): ?array {
+    private function edit(int $id = 0): ?array 
+    {
         
         if (! $row = $this->model->find((int) $id)) { return null; }
         helper('path');

@@ -8,8 +8,6 @@
 
 <!-- Section styles -->
 <?= $this->section('styles') ?>
-    <!-- <link href="/control/assets/css/filemanager-.css" rel="stylesheet">
-    <link href="/control/assets/css/treemodal-.css" rel="stylesheet"> -->
 <?= $this->endSection() ?>
 
 <!-- Section content -->

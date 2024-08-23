@@ -29,8 +29,6 @@ $this->extend('Sygecon\AdminBundle\Views\Layout\page')
 
 <!-- Section styles -->
 <?= $this->section('styles') ?>
-    <link href="/control/assets/css/treemodal-<?= $valid_hash ?>.css" rel="stylesheet">
-    <link href="/control/assets/css/filemanager-<?= $valid_hash ?>.css" rel="stylesheet">    
     <style>
         .breadcrumb {float: right !important;}
         .breadcrumb .page {margin-top: .25rem !important;}
@@ -40,9 +38,9 @@ $this->extend('Sygecon\AdminBundle\Views\Layout\page')
 
 <!-- Section content -->
 <?= $this->section('scripts') ?>
-<script defer src="/control/assets/js/treemodal.<?= $valid_hash ?>.js"></script>
-<script defer src="/control/assets/js/filemanager.<?= $valid_hash ?>.js"></script>
-<script defer src="/control/assets/js/tinymce.<?= $valid_hash ?>.js"></script>
+<script defer src="/control/assets/js/treemodal-<?= $valid_hash ?>.js"></script>
+<script defer src="/control/assets/js/filemanager-<?= $valid_hash ?>.js"></script>
+<script defer src="/control/assets/js/tinymce-<?= $valid_hash ?>.js"></script>
 <script defer src="/assets/js/components/asp.save.form.js"></script>
 <script defer src="/assets/js/components/asp.select.language.js"></script>
 <?= $this->endSection() ?>

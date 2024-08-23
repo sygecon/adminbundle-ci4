@@ -6,7 +6,12 @@ if (! function_exists('createPath')) {
     {
         $dir = castingPath($path);
         if (is_dir($dir) === true) return true;
-        return mkdir($dir, 0755, true);
+        try {
+            mkdir($dir, 0755, true);
+            return is_dir($dir);
+        } catch (\Throwable $th) {
+            return false;
+        }
     }
 }
 
@@ -31,7 +36,7 @@ if (! function_exists('deletePath')) {
     {
         $dir = castingPath($path);
         if (is_file($dir) === true) { 
-            if ($startDelete === true) { return @unlink($dir); }
+            if ($startDelete === true) { return unlink($dir); }
             return false;
         }
         if (is_dir($dir) === false) { return false; }
@@ -42,11 +47,17 @@ if (! function_exists('deletePath')) {
                 \RecursiveDirectoryIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST
             ) as $fileInfo) 
         {
+            $origin = $fileInfo->getPathname();
+            if (is_link($origin)) {
+                if (!(unlink($origin) || '\\' !== \DIRECTORY_SEPARATOR || rmdir($origin)) && file_exists($origin)) {
+                    return false;
+                }
+            } else
             if ($fileInfo->isDir()) {
-                $folders[] = $fileInfo->getRealPath();
-                continue;
+                $folders[] = $origin;
+            } else {
+                unlink($origin);
             }
-            @unlink($fileInfo->getRealPath());
         }
 
         if ($folders) {
@@ -59,7 +70,7 @@ if (! function_exists('deletePath')) {
             foreach($folders as $pathName) { rmdir($pathName); }
         }
         
-        if ($startDelete === true) return rmdir($dir);
+        if ($startDelete === true && is_dir($dir) === true) return rmdir($dir);
         return true;
     }
 }
@@ -69,7 +80,7 @@ if (! function_exists('deleteFile')) {
     function deleteFile(string $fileName): bool 
     {
         $file = castingPath($fileName);
-        if (file_exists($file) === true) { return @unlink($file); }
+        if (file_exists($file) === true) { return unlink($file); }
         return false;
     }
 }
@@ -115,24 +126,30 @@ if (! function_exists('copyPath')) {
     {
         $src = castingPath($srcPath);
         $dst = castingPath($dstPath);
+        $originDirLen = strlen($src);
         if (is_dir($src) === false) return false;
         if (createPath($dst) === false) return false;
+        
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($src, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
 
-        try {
-            $iterator = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($src, \RecursiveDirectoryIterator::SKIP_DOTS),
-                \RecursiveIteratorIterator::SELF_FIRST
-            );
-            foreach ($iterator as $file) {
-                $dir = $dst . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
-                if ($file->isDir()) {
-                    if (is_dir($dir) === false) mkdir($dir, 0755, true);
-                } else {
-                    if ($move === true) rename($file, $dir); else copy($file, $dir);
+        foreach ($iterator as $file) {
+            $origin = $file->getPathname();
+            $target = $dst.substr($origin, $originDirLen);
+            // $dir = $dst . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
+            if ($file->isDir()) {
+                if (is_dir($target) === false) mkdir($target, 0755, true);
+            } else {
+                if ($move === true) rename($origin, $target); else copy($origin, $target);
+                if (is_file($target) === true) {
+                    chmod($target, fileperms($target) | (fileperms($origin) & 0111));
+                    touch($target, filemtime($origin));
                 }
             }
-            return true;
-        } catch (\Throwable $th) { return false; }
+        }
+        return true;
     }
 }
 

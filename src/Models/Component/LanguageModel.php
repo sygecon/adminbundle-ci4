@@ -68,6 +68,8 @@ final class LanguageModel extends Model
     public function remove(int $id = 0): bool
     {
         if (! $id) { return false; }
+        $len = (int) $this->countAll();
+        if (is_numeric($len) === false || 2 > $len) return false;
         if (! $row = $this->find((int) $id, 'position')) { return false; }
         if (! $this->delete((int) $id)) { return false; }
         $this->db->query(

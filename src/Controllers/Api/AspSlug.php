@@ -2,27 +2,21 @@
 
 namespace Sygecon\AdminBundle\Controllers\Api;
 
-use CodeIgniter\HTTP\ResponseInterface;
-use CodeIgniter\API\ResponseTrait;
 use Config\Boot\NestedTree;
 use Sygecon\AdminBundle\Controllers\AdminController;
 use Sygecon\AdminBundle\Libraries\Tree\PageList;
 use Sygecon\AdminBundle\Libraries\Tree\NestedGet;
 
-final class AspSlug extends AdminController {
-    
-    use ResponseTrait;
-
+final class AspSlug extends AdminController 
+{
     private int $nsTree = 1;
 
-    public function me_pages(string $lang = APP_DEFAULT_LOCALE, string $nodesId = ''): ResponseInterface 
+    public function me_pages(string $lang = APP_DEFAULT_LOCALE, string $nodesId = ''): string 
     {
-        return $this->respond(
-            jsonEncode(PageList::fromString($nodesId, $lang), false)
-        , 200);
+        return $this->successfulResponse(PageList::fromString($nodesId, $lang), true);
     }
 
-    public function me_links(bool $onlyActive = null): ResponseInterface 
+    public function me_links(bool $onlyActive = null): string 
     {
         $onlyPath = false;
         if ($this->request->is('put')) {
@@ -51,6 +45,6 @@ final class AspSlug extends AdminController {
             }
         }
 
-        return $this->respond(jsonEncode($tree::buildTree($data), false), 200);
+        return $this->successfulResponse($tree::buildTree($data), true);
     }
 }

@@ -37,6 +37,6 @@
 
 <!-- Section content -->
 <?= $this->section('scripts') ?>
-    <script defer src="/control/assets/js/aceEditor.<?= $valid_hash ?>.js"></script>
+    <script defer src="/control/assets/js/aceEditor-<?= $valid_hash ?>.js"></script>
     <script defer src="/assets/js/components/asp.select.language.js"></script>
 <?= $this->endSection() ?>

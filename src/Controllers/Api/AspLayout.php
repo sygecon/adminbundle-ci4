@@ -1,42 +1,33 @@
 <?php
 namespace Sygecon\AdminBundle\Controllers\Api;
 
-use CodeIgniter\HTTP\ResponseInterface;
 use Sygecon\AdminBundle\Controllers\AdminController;
 use Sygecon\AdminBundle\Models\Template\LayoutModel as BaseModel;
 
 final class AspLayout extends AdminController {
 
-    public function me_list(): ResponseInterface 
+    public function me_list(): string 
     {
-        if ($this->request->getMethod() === 'get') {
-            if (! $data = cache('Layout_All')) {
-                $model = new BaseModel();
-                $model->JsonEncode = true;
-                $data = $model->getBuilder();
-            }
-            return $this->respond($data, 200);
+        if (strtolower($this->request->getMethod()) !== 'get') {
+            return $this->successfulResponse('[]');
         }
-        return $this->fail(lang('Admin.IdNotFound'));
+        $model = new BaseModel();
+        // $model->JsonEncode = true;
+        return $this->successfulResponse($model->getBuilder(), true);
     }
 
-    public function me_get(int $id = 1): ResponseInterface 
+    public function me_get(int $id = 1) 
     {
-        if ($this->request->getMethod() === 'get') {
-            if ($id < 1) { $id = 1; }
-            if (! $data = cache('Layout_Id_' . $id)) {
-                $model = new BaseModel();
-                $model->JsonEncode = true;
-                $data = $model->getBuilder($id);
-            }
-            return $this->respond($data, 200);
-        }
-        return $this->fail(lang('Admin.IdNotFound'));
+        if (strtolower($this->request->getMethod()) !== 'get') return null;
+        if ($id < 1) $id = 1; 
+        $model = new BaseModel();
+        // $model->JsonEncode = true;
+        return $this->successfulResponse($model->getBuilder($id), true);
     }
 
-    public function me_sheet(int $layoutId = 0): ResponseInterface 
+    public function me_sheet(int $layoutId = 0): string 
     {
-        if ($this->request->getMethod() === 'get') {
+        if (strtolower($this->request->getMethod()) === 'get') {
             if ($layoutId) {
                 $name = 'Layout_Sheet_List_' . $layoutId;
                 if (! $res = cache($name)) {
@@ -49,11 +40,11 @@ final class AspLayout extends AdminController {
                     $data[0]['data'] = $model->getSheet();
                     $data[1]['data'] = $model->getSheet((int) $layoutId);
                     $res = jsonEncode($data, false);
-                    cache()->save($name, $res, 20160);
+                    cache()->save($name, $res, $model::CACHE_TTL);
                 }
-                return $this->respond($res, 200);
+                return $res;
             }
         }
-        return $this->fail(lang('Admin.IdNotFound'));
+        return '[]';
     }
 }

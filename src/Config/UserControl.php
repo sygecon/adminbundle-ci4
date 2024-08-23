@@ -3,10 +3,6 @@ namespace Sygecon\AdminBundle\Config;
 
 final class UserControl
 {
-	public const TABLE  = 'user_details';
-
-    public const COL_DATA  = 'data';
-
     public const FORM_JSON_PATH = 'control/form/user/';
 
     public const CACHE_FIELDS   = 'Fields_User_Data';

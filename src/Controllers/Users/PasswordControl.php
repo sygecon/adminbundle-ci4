@@ -2,7 +2,6 @@
 declare(strict_types=1);  
 namespace Sygecon\AdminBundle\Controllers\Users;
 
-use CodeIgniter\HTTP\ResponseInterface;
 use Sygecon\AdminBundle\Controllers\AdminController;
 use Throwable;
 
@@ -12,7 +11,7 @@ final class PasswordControl extends AdminController
 
     protected $helpers = ['setting', 'url', 'form'];
 
-    public function index(string $isChange = 'off'): ResponseInterface 
+    public function index(string $isChange = 'off') 
     {
         if (! auth()->loggedIn()) {
             return redirect()->to(self::ERROR_REDIRECT);
@@ -25,13 +24,13 @@ final class PasswordControl extends AdminController
             $_SESSION['previous_url'] = previous_url();
         }
 
-        return $this->respond($this->build('set_password', [
+        return $this->build('set_password', [
             'head' => [
                 'title' => lang('Admin.changePasswordTitle'),
                 'icon'  => 'person-lock'
             ],
             'old_input' => ($isChange === 'off' ? false : true)
-        ], 'User'));
+        ], 'User');
     }
 
     public function update() 
@@ -99,26 +98,24 @@ final class PasswordControl extends AdminController
             baseWriteFile('logs/Errors/User-Set-Password.log', date('H:i:s d.m.Y') . ' => ' . auth()->user()->username . ' - ' . $error); 
             return redirect()->to($url)->withInput()->with('error', $error);
         }
-        //return $this->respond(jsonEncode($result, false), 200);
+        //return jsonEncode($result, false);
     }
 
-    public function reset(): ResponseInterface 
+    public function reset()
     {
-        if (! auth()->loggedIn()) {
-            return redirect()->to(self::ERROR_REDIRECT);
-        }
+        if (! auth()->loggedIn()) return redirect()->to(self::ERROR_REDIRECT);
 
         $user = auth()->user();
 		if ($this->request->isAJAX()) {
 			try {
 				$user->forcePasswordReset();
                 // logout user and print login via new password
-				return $this->respond('ok', 200);
+				return $this->successfulResponse('ok');
 			} catch (Throwable $th) { 
-				return $this->fail(lang('Admin.IdNotFound'));
+				return $this->pageNotFound();
 			}
 		}
-		return $this->fail(lang('Admin.IdNotFound'));
+		return $this->pageNotFound();
 	}
 
     /**

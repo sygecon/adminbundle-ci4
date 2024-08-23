@@ -181,6 +181,8 @@ return [
             'importDataDesc' => 'Importing text data',
             'importResourcesName' => 'Resources',
             'importResourcesDesc' => 'Import resources (styles, scripts, images...)',
+            'projectStructureName' => "Project basis",
+            'projectStructureDesc' => "The basis of the project",
         ]
     ],
     // Пользователи

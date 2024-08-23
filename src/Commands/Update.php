@@ -9,9 +9,7 @@ use App\Libraries\Loader\Githab;
 use Sygecon\AdminBundle\Libraries\LibraryLoader;
 use Throwable;
 
-// # php spark make:import about build
-// after
-// # php spark make:import about
+// # php spark make:update
 class Update extends BaseCommand
 {
     protected $group        = 'Generators';
@@ -23,16 +21,27 @@ class Update extends BaseCommand
     {
         ignore_user_abort(true);
         set_time_limit(0);
-        $isUpdate = true;
-        if ($params[0] && $params[0] === 'install') { $isUpdate = false; } 
+
+        $name = null;
+        $isGit = (isset($params[0]) ? false : true); 
+        
+        if ($isGit === false) {
+            $name = $params[0];
+        }
 
         try {
             CLI::write('Preparing processes ...');
-            $gitHab = new Githab();
-            if ($result = $gitHab->build($isUpdate)) {
-                $loader = new LibraryLoader();
-                $loader->build($result);
+            if ($isGit === true) {
+                $gitHab = new Githab();
+                if ($result = $gitHab->make(true)) {
+                    $loader = new LibraryLoader();
+                    $loader->build($result);
+                }
+                return;
             }
+            
+            $loader = new LibraryLoader($name);
+            $loader->build();
         } catch (Throwable $th) {
             $this->showError($th);
         }

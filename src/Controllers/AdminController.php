@@ -3,27 +3,26 @@
 namespace Sygecon\AdminBundle\Controllers;
 
 use CodeIgniter\Controller;
+use CodeIgniter\HTTP\CLIRequest;
+use CodeIgniter\HTTP\IncomingRequest;
+use CodeIgniter\HTTP\RequestInterface;
+use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
-use CodeIgniter\API\ResponseTrait;
 use Locale;
 
-abstract class AdminController extends Controller {
-
-	use ResponseTrait;
-
-	protected const VALID_HASH = '8859d89d06b12603008e';
+abstract class AdminController extends Controller 
+{
+	protected const VALID_HASH = '19ceb94e';
 
 	protected $locale = APP_DEFAULT_LOCALE;
 
 	protected $session;
 
-	public function initController(
-		\CodeIgniter\HTTP\RequestInterface $request,
-		\CodeIgniter\HTTP\ResponseInterface $response,
-		\Psr\Log\LoggerInterface $logger
-	) {
+	public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger) 
+	{
 		parent::initController($request, $response, $logger);
 
 		$this->session = Services::session();
@@ -72,6 +71,21 @@ abstract class AdminController extends Controller {
 
 		return view('Sygecon\AdminBundle\Views\Pages\\' . $path . 'asp_' . $page, $data);
 	}
+
+	protected function successfulResponse(mixed $response = null, bool $IsEncode = false): string
+	{
+        if ($this->request->isAJAX()) {
+			return (string) jsonEncode(['status' => 200, 'message' => $response], false);
+		}
+		if ($IsEncode === true) return (string) jsonEncode($response, false);
+		if (is_array($response) === true) return (string) jsonEncode($response, false);
+		return (string) $response;
+	}
+
+	protected function pageNotFound(): string 
+    {
+        return (string) jsonEncode(['status'  => 404, 'message' => lang('Admin.error.notFindPage')], false);
+    }
 
 	protected function postTokenValid(array $data = []): array 
 	{

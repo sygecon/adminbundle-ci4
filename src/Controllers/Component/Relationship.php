@@ -1,7 +1,6 @@
 <?php
 namespace Sygecon\AdminBundle\Controllers\Component;
 
-use CodeIgniter\HTTP\ResponseInterface;
 use Sygecon\AdminBundle\Controllers\AdminController;
 use Sygecon\AdminBundle\Models\Component\RelationshipModel as BaseModel;
 
@@ -13,28 +12,34 @@ final class Relationship extends AdminController {
         $this->model = model(BaseModel::class);
     }
 
-    public function index(int $id = 0): ResponseInterface
+    public function index(int $id = 0): string
     {
-        if ($this->request->getMethod() !== 'get') {
-            return $this->fail(lang('Admin.IdNotFound'));
-        }
+        if (strtolower($this->request->getMethod()) !== 'get') return $this->pageNotFound();
+        
         if ($this->request->isAJAX()) {
             if ($data = $this->model->find($id)) {
-                return $this->respond(jsonEncode($data, false), 200);
+                return $this->successfulResponse($data);
             }
-            return $this->respond('[]', 200);
+            return $this->successfulResponse([]);
         }
-        return $this->respond($this->build('relationship', [   
-            'field' => ['left' => $this->model::COL_LEFT, 'right' => $this->model::COL_RIGHT],
-            'head' => ['icon' => 'shuffle', 'title' => lang('Admin.menu.sidebar.relationDesc')]
-        ], 'Component'), 200);
+
+        return $this->build('relationship', [   
+            'field' => [
+                'left' => $this->model::COL_LEFT, 
+                'right' => $this->model::COL_RIGHT
+            ],
+            'head' => [
+                'icon' => 'shuffle', 
+                'title' => lang('Admin.menu.sidebar.relationDesc')
+            ]
+        ], 'Component');
     }
 
     /**
-     * Create a new resource object, from "posted" parameters.
-     * @return array an array
+     * Create a new object.
+     * @return string
      */
-    public function create(): ResponseInterface 
+    public function create(): string 
     {
         $data = $this->postDataValid($this->request->getPost(), 32, 128);
         if (isset($data['name']) && strlen($data['name']) > 2) {
@@ -44,22 +49,23 @@ final class Relationship extends AdminController {
             $data[$this->model::COL_RIGHT] = (int) $data[$this->model::COL_RIGHT];
             if ($data[$this->model::COL_LEFT] && $data[$this->model::COL_RIGHT]) {
                 if ($id = $this->model->create($data)) {
-                    return $this->respondCreated($id, lang('Admin.navbar.msg.msg_insert')); //
+                    return $this->successfulResponse($id);
                 }
             }
         }
-        return $this->fail(lang('Admin.IdNotFound'));
+        return $this->pageNotFound();
     }
 
     /**
-     * Add or update a model resource, from "posted" properties.
+     * Update a object.
      * @param int $id
-     * @return array an array
+     * @return string
      */
-    public function update(int $id = 0): ResponseInterface 
+    public function update(int $id = 0): string
     {
-        if (!$id) return $this->fail(lang('Admin.IdNotFound'), 400);
-        if (! $data = $this->request->getRawInput()) { return $this->fail(lang('Admin.IdNotFound'), 400); }
+        if (! $id) return $this->pageNotFound();
+        if (! $data = $this->request->getRawInput()) return $this->pageNotFound(); 
+        
         $oldData = $this->model->find((int) $id);
         if (isset($oldData) && isset($oldData->name)) {
             $data = $this->postDataValid($data, 32, 128);
@@ -94,34 +100,35 @@ final class Relationship extends AdminController {
                 }
                 unset($oldData->title, $oldData);
                 if ($this->model->update($id, $data) === false) {
-                    return $this->fail(lang('Admin.IdNotFound'), 400);
+                    return $this->pageNotFound();
                 }
             }
         } 
-        return $this->respondUpdated($id, lang('Admin.navbar.msg.msg_update'));
+        return $this->successfulResponse($id);
     }
+
     /**
-     * Return the editable properties of a resource object.
+     * Return the editable properties of a object.
      * @param int $id
-     * @return array an array
+     * @return string
      */
-    public function edit(int $id = 0): ResponseInterface
+    public function edit(int $id = 0): string
     {
         if ($data = $this->model->find((int) $id, '*', 'array')) { 
-            return $this->respond(jsonEncode($data, false), 200);
+            return $this->successfulResponse($data);
         }
-        return $this->fail(lang('Admin.IdNotFound')); 
+        return $this->pageNotFound(); 
     }
+
     /**
-     * Delete the designated resource object from the model.
-     * @param int $id
+     * Delete object from the model.
+     * @param string
      */
-    public function delete(int $id = 0): ResponseInterface 
+    public function delete(int $id = 0): string 
     {
-        if (!$id) return $this->fail(lang('Admin.IdNotFound'), 400);
-        if (!$this->model->delete($id)) {
-            return $this->failNotFound(lang('Admin.navbar.msg.msg_get_fail'));
+        if ($id && $this->model->delete($id)) {
+            return $this->successfulResponse($id);
         }
-        return $this->respondDeleted($id, lang('Admin.navbar.msg.msg_delete'));
+        return $this->pageNotFound();
     }
 }

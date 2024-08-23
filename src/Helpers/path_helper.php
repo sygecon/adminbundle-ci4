@@ -1,41 +1,54 @@
 <?php
 
 if (! function_exists('toSnake')) {
-    function toSnake(string $text = ''): string
+    /**
+     * toSnake
+     * Takes multiple words separated by camel case and underscores them.
+     * @param string $string Input string
+     */
+    function toSnake(string $string): string
     {
-        if (! $result = str_replace(' ', '', $text)) return '';
-        if (ctype_alpha($result) === true && ctype_lower($result) === true) return $result;
-        return strtolower(preg_replace('/(.)(?=[A-Z])/u', '$1_', $result));
+        return strtolower(preg_replace(['/([a-z\d])([A-Z])/', '/([^_])([A-Z][a-z])/'], '$1_$2', trim($string)));
     }
 }
 
 if (! function_exists('toCamelCase')) {
-    function toCamelCase(string $text = ''): string 
+    /**
+     * toCamelCase
+     * Takes multiple words separated by spaces or underscores and converts them to Pascal case,
+     * which is camel case with an uppercase first letter.
+     * @param string $string Input string
+     */
+    function toCamelCase(string $string): string 
     {
-        if (! $text = strtolower(str_replace(' ', '', $text))) return '';
-        $result = '';
-        foreach (explode('_', $text) as $word) { $result .= ucfirst(trim($word)); }
-        return $result;
+        $str = lcfirst(str_replace(' ', '', ucwords(preg_replace('/[\s_]+/', ' ', $string))));
+        return ucfirst($str);
+    }
+}
+
+if (! function_exists('underscore')) {
+    /**
+     * Underscore
+     * Takes multiple words separated by spaces and underscores them
+     * @param string $string Input string
+     */
+    function underscore(string $string): string
+    {
+        $replacement = trim($string);
+        return preg_replace('/[\s]+/', '_', $replacement);
     }
 }
 
 /// Приведение пути к стандарту Класса  -------------------------------------------
 if (! function_exists('toClassUrl')) {
-    function toClassUrl(string $classname = '', string $suffix = ''): string 
+    function toClassUrl(string $string = '', string $suffix = ''): string 
     {
-        // $classname = preg_replace_callback(
-        //     '~(?<=^|[\pP\h])\pL~u',
-        //     function ($m) { return strtoupper($m[0]); },
-        //     trim(str_replace(['_', '-', '|'], [' ', ' ', '/'], toUrl($classname)), '/')
-        // );
-        $classname = str_replace(['-', '|', ' '], ['_', '/', '_'], toUrl($classname));
+        $classname = str_replace(['-', '|', ' '], ['_', '/', '_'], toUrl($string));
         $classname = trim(str_replace(['__', '//'], ['_', '/'], $classname), '/');
         $classname = toCamelCase($classname);
-        //$classname = str_replace(' ', '', $classname);
         if ($suffix) {
-            $suffix = ucfirst($suffix);
-            if ($suffix && substr($classname, -1 * strlen($suffix)) !== $suffix) 
-                return $classname . $suffix;
+            $sfx = ucfirst($suffix);
+            if ($sfx && substr($classname, -1 * strlen($sfx)) !== $sfx) return $classname . $sfx;
         }
         return $classname;
     }
@@ -70,8 +83,9 @@ if (! function_exists('previousUrl')) {
 if (! function_exists('readingDataFromFile')) {
     function readingDataFromFile(string $fileName): string 
     {
-        if (is_file($fileName) === true && is_readable($fileName) === true) { 
-            if ($data = file_get_contents($fileName)) return $data;
+        $path = castingPath($fileName, false);
+        if (true === file_exists($path)) { 
+            if ($data = file_get_contents($path)) return $data;
         }
         return '';
     }
@@ -81,37 +95,32 @@ if (! function_exists('readingDataFromFile')) {
 if (! function_exists('writingDataToFile')) {
     function writingDataToFile(string $fileName = '', string $data = '', bool $bkDelete = true): bool 
     {
-        if (! $fileName) return false;
-        $bkName  = '';
-        if (true === file_exists($fileName)) {
-            $bkName = $fileName . '.bak.php';
-            if (true === is_file($bkName)) @unlink($bkName);
-            rename($fileName, $bkName);
+        $path = castingPath($fileName, false);
+        if (! $path) return false;
+        $bkName = '';
+        $buffer = trim(urldecode($data)) . PHP_EOL;
+        $length = mb_strlen($buffer, 'UTF-8');
+
+        if (true === file_exists($path)) {
+            $bkName = $path . '.bak.php';
+            if (true === file_exists($bkName)) unlink($bkName);
+            rename($path, $bkName);
         }
-        
-        if (! $fp = fopen($fileName, 'c')) return false; // 'wb'
-        $buffer   = trim(urldecode($data)) . PHP_EOL;
-        $length   = mb_strlen($buffer);
-        $fwrite   = 0;
-        $written  = 0;
+
         try {
-            flock($fp, LOCK_EX);
-            for ($written = 0; $written < $length; $written += $fwrite) {
-                $fwrite   = fwrite($fp, mb_substr($buffer, $written));
-                if (false === $fwrite) break;
+            $written = file_put_contents($path, $buffer, LOCK_EX);
+            if ($written !== false && $written >= $length) { 
+                if (true === $bkDelete && $bkName) unlink($bkName);
+                return true; 
             }
-            flock($fp, LOCK_UN);
-            fclose($fp);
-        } catch (\Throwable $th) { $written = 0; }
-        
-        if ($written === $length) { 
-            if (true === $bkDelete && true === isset($bkName)) @unlink($bkName);
-            return true; 
+        } catch (\Throwable $th) {
+            $written = 0; 
         }
-        if ($bkName && true === is_file($bkName)) {
-            if (is_file($fileName)) @unlink($fileName);
-            rename($bkName, $fileName);
-            @unlink($bkName); 
+
+        if ($bkName && true === file_exists($bkName)) {
+            if (true === file_exists($path)) unlink($path);
+            rename($bkName, $path);
+            if (true === file_exists($bkName)) unlink($bkName);
         }
         return false;
     }
@@ -119,19 +128,21 @@ if (! function_exists('writingDataToFile')) {
 
 // Перезапись файла
 if (! function_exists('baseWriteFile')) {
-    function baseWriteFile(string $name = '', string $data = '', bool $bkDelete = true): bool 
+    function baseWriteFile(string $path = '', string $data = '', bool $bkDelete = true): bool 
     {
-        $fileName = WRITEPATH . 'base' . DIRECTORY_SEPARATOR . castingPath($name, true);
-        return writingDataToFile($fileName, $data, $bkDelete);
+        if (! isset($path)) return false;
+        if (! $path) return false;
+        return writingDataToFile(WRITEPATH . 'base' . DIRECTORY_SEPARATOR . $path, $data, $bkDelete);
     }
 }
 
 // Чтение файла
 if (! function_exists('baseReadFile')) {
-    function baseReadFile(string $name): string
+    function baseReadFile(string $path): string
     {
-        $fileName = WRITEPATH . 'base' . DIRECTORY_SEPARATOR . castingPath($name, true);
-        return readingDataFromFile($fileName);
+        if (! isset($path)) return '';
+        if (! $path) return '';
+        return readingDataFromFile(WRITEPATH . 'base' . DIRECTORY_SEPARATOR . $path);
     }
 }
 

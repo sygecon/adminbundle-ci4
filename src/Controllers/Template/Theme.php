@@ -1,7 +1,6 @@
 <?php
 namespace Sygecon\AdminBundle\Controllers\Template;
 
-use CodeIgniter\HTTP\ResponseInterface;
 use Sygecon\AdminBundle\Controllers\AdminController;
 use Sygecon\AdminBundle\Models\Template\ThemeModel as BaseModel;
 
@@ -17,26 +16,24 @@ final class Theme extends AdminController
         $this->model = new BaseModel();
     }
 
-    public function index(int $id = 0): ResponseInterface 
+    public function index(int $id = 0): string 
     {
-        if ($this->request->getMethod() !== 'get') {
-            return $this->fail(lang('Admin.IdNotFound'));
-        }
-
+        if (strtolower($this->request->getMethod()) !== 'get') return $this->pageNotFound();
+        
         if ($id) {
             if (! $row = $this->model->find((int) $id, 'active, name, title')) {
-                return $this->fail(lang('Admin.IdNotFound'));
+                return $this->pageNotFound();
             }
             //$path = ($row->active ? ACTIVE_THEME : $row->name);
-            return $this->respond($this->build('theme_edit', [
+            return $this->build('theme_edit', [
                 'id'    => (int) $id,
                 'theme' => $row->name,
-                'head' => [
+                'head'  => [
                     'h1' => $this->genLinkHome((! $row->title ? $row->name : $row->title)),
                     'icon' => 'menu-up', 
                     'title' => lang('Admin.editTitle')
                 ]
-            ], 'Template'), 200);
+            ], 'Template');
         }
 
         if ($this->request->isAJAX()) {
@@ -44,83 +41,89 @@ final class Theme extends AdminController
                 foreach ($data as &$value) {
                     $value->{'path'} = $value->name; //($value->active ? ACTIVE_THEME : $value->name);
                 }
-                return $this->respond(jsonEncode($data, false), 200);
+                return $this->successfulResponse($data);
             }
-            return $this->respond('[]', 200);
+            return $this->successfulResponse([]);
         }
-        return $this->respond($this->build('theme',
-            ['head' => ['icon' => 'nut', 'title' => lang('Admin.menu.sidebar.themesDesc')]] 
-        , 'Template'), 200);
+
+        return $this->build('theme', ['head' => [
+            'icon' => 'nut', 
+            'title' => lang('Admin.menu.sidebar.themesDesc')
+        ]], 'Template');
     }
 
     /**
-     * Create a new resource object, from "posted" parameters.
-     * @return array an array
+     * Create a new object.
+     * @return string
      */
-    public function create(int $id = 0): ResponseInterface 
+    public function create(int $id = 0): string 
     {
         $data = $this->postDataValid($this->request->getPost());
-        if (isset($data['name'])) {
-            //helper('path'); toCamelCase = as Name, toSnake = as Folder Name
-            $name = checkFileName($data['name']);
-            if (! $id && mb_strlen($name) > 2 && $name !== ACTIVE_THEME) {
-                $active = false;
-                if (!$data['title']) $data['title'] = $data['name'];
-                $data['name'] = $name;
-                if (! $this->model->getCount()) { 
-                    $data['active'] = (int) 1; 
-                    $active = true;
-                }
-                if ($id = $this->model->insert($data)) {
-                    if ($active) { $this->model->setActiveConstant($name); }
-                    helper('files');
-                    createPath(FCPATH . castingPath(PATH_THEME, true) . DIRECTORY_SEPARATOR . $name);
-                    return $this->respondCreated($id, lang('Admin.navbar.msg.msg_insert')); //
-                }
+        if (! isset($data['name'])) return $this->pageNotFound();
+
+        //helper('path'); toCamelCase = as Name, toSnake = as Folder Name
+        $name = checkFileName($data['name']);
+        if (! $id && mb_strlen($name) > 2 && $name !== ACTIVE_THEME) {
+            $active = false;
+            if (!$data['title']) $data['title'] = $data['name'];
+            $data['name'] = $name;
+            if (! $this->model->getCount()) { 
+                $data['active'] = (int) 1; 
+                $active = true;
+            }
+            if ($id = $this->model->insert($data)) {
+                if ($active) { $this->model->setActiveConstant($name); }
+                helper('files');
+                createPath(FCPATH . castingPath(PATH_THEME, true) . DIRECTORY_SEPARATOR . $name);
+                return $this->successfulResponse($id);
             }
         }
-        return $this->fail(lang('Admin.IdNotFound'));
+        return $this->pageNotFound();
     }
 
     /* Open file */
-    public function open(int $id = 0): ResponseInterface 
+    public function open(int $id = 0): string 
     {
         if ($id) {
-            if (! $data = $this->request->getRawInput()) { return $this->fail(lang('Admin.IdNotFound')); }
-            if (isset($data['fname'])) {
+            if (! $data = $this->request->getRawInput()) return $this->pageNotFound();
+            if (isset($data['fname']) === true && $data['fname']) {
                 helper('path');
-                return $this->respond(readingDataFromFile(FCPATH . trim(PATH_THEME, '\\/') . $data['fname']), 200);
+                return $this->successfulResponse(
+                    readingDataFromFile(FCPATH . trim(PATH_THEME, '\\/') . $data['fname'])
+                );
             }
         }
-        return $this->fail(lang('Admin.IdNotFound'));
+        return $this->pageNotFound();
     }
 
     /**
-     * Add or update a model resource, from "posted" properties.
+     * Updating object data.
      * @param int $id
-     * @return array an array
+     * @return string
      */
-    public function update(int $id = 0): ResponseInterface 
+    public function update(int $id = 0): string 
     {
-        if (!$id) return $this->fail(lang('Admin.IdNotFound'), 400);
+        if (!$id) return $this->pageNotFound();
         $data = $this->postDataValid($this->request->getRawInput());
-        if (!$data) return $this->fail(lang('Admin.IdNotFound'));
+        if (!$data) return $this->pageNotFound();
         
         if (isset($data['title'])) { // Изменение описания темы
             $oldData = $this->model->find((int) $id, 'name, title');
-            if (!isset($oldData) || !$oldData) return $this->fail(lang('Admin.IdNotFound'));
+            if (!isset($oldData) || !$oldData) return $this->pageNotFound();
             if ($data['title'] && $data['title'] !== $oldData->title) {
                 if ($this->model->update($id, ['title' => $data['title']]) === false) {
-                    return $this->fail(lang('Admin.IdNotFound'));
+                    return $this->pageNotFound();
                 }
             }
-        } else if (isset($data['active'])) { // Тема По умолчанию
+        } else 
+        if (isset($data['active'])) { // Тема По умолчанию
             $row = $this->model->getActive();
             if (! $this->model->setActive((int) $id)) {
-                return $this->fail(lang('Admin.IdNotFound'));
+                return $this->pageNotFound();
             }   
             $this->minify((int) $id);
-        } else if (isset($data['data']) && isset($data['fname'])) {
+        } else 
+        if (isset($data['data']) && isset($data['fname'])) {
             helper('path');
             $fileName = castingPath(PATH_THEME, true) . DIRECTORY_SEPARATOR . trim($data['fname'], '\\/');
             $fname = FCPATH . $fileName;
@@ -128,7 +131,7 @@ final class Theme extends AdminController
             $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
             if (isset($data['data'][$ext])) {
                 if (! writingDataToFile($fname, $data['data'][$ext])) {
-                    return $this->fail(lang('Admin.IdNotFound'));   
+                    return $this->pageNotFound();  
                 }
                 unset($data['data'][$ext], $data['data']);
                 // Автогенерация после изменений в файле, одного общего файла мини .css .js
@@ -157,32 +160,33 @@ final class Theme extends AdminController
                 }
             }
         } else {
-            return $this->fail(lang('Admin.IdNotFound'));
+            $this->pageNotFound();
         }
-        return $this->respondUpdated($id, lang('Admin.navbar.msg.msg_update'));
+        return $this->successfulResponse($id);
     }
 
     /**
-     * Delete the designated resource object from the model.
-     * @param int $id
+     * Delete a object from the model.
      */
-    public function delete(int $id = 0, string $name = ''): ResponseInterface 
+    public function delete(int $id = 0, string $name = ''): string 
     {
-        if (! $row = $this->model->find((int) $id, 'active')) { return $this->fail(lang('Admin.IdNotFound')); }
-        if ($row->active) { return $this->fail(lang('Admin.IdNotFound')); }
-        if (! $name) {
-            if (!$this->model->delete((int) $id)) {
-                return $this->failNotFound(lang('Admin.navbar.msg.msg_get_fail'));
-            }
-        } 
-        return $this->respondDeleted($id, lang('Admin.navbar.msg.msg_delete'));
+        if (! $id) return $this->pageNotFound();
+        if (! $name) return $this->pageNotFound();
+        if (! $row = $this->model->find((int) $id, 'active')) return $this->pageNotFound(); 
+        if ($row->active) return $this->pageNotFound();
+
+        if (! $this->model->delete((int) $id)) return $this->pageNotFound();
+        return $this->successfulResponse($id);
     }
 
     /***/
-    public function topics(): ResponseInterface 
+    public function topics(): string 
     {
         $themes = [];
-        $isNames = array_column($this->model->builder()->select('name')->orderBy('updated_at', 'DESC')->get()->getResultArray(), 'name');
+        $isNames = array_column(
+            $this->model->builder()->select('name')->orderBy('updated_at', 'DESC')->get()->getResultArray()
+        , 'name');
+
         foreach ($isNames as $i => $value) {
             $isNames[$i] = strtolower($value);   
         }
@@ -199,29 +203,36 @@ final class Theme extends AdminController
             }
             closedir($handle);
         }
+
         if (! $themes) { $themes[] = ''; }
-        return $this->respond(jsonEncode($themes, false), 200);
+        return $this->successfulResponse($themes, true);
     }
 
-    public function resource(int $id = 0, string $type = ''): ResponseInterface 
+    /*
+    * @return bool|string
+     */
+    public function resource(int $id = 0, string $type = '') 
     {
         if ($id && $type) { 
-            if ($this->request->getMethod() === 'get') {
-                return $this->respond(
-                    jsonEncode($this->model->getResource((int) $id, $type), false)
-                , 200);
+            if (strtolower($this->request->getMethod()) === 'get') {
+                return $this->successfulResponse(
+                    $this->model->getResource((int) $id, $type)
+                , true);
             }
+
             $data = $this->request->getRawInput();
             if ($data && is_array($data)) {
-                return $this->respond($this->model->setResource((int) $id, $data), 200);
+                return $this->successfulResponse(
+                    $this->model->setResource((int) $id, $data)
+                );
                 // {"src":"\/themes\/_current\/js\/bootstrap.min.js","alt":"bootstrap.min.js","action":"insert"}
             }
         }
-        return $this->respond(false, 200);
+        return $this->successfulResponse(false);
     }
 
     /** Combining scripts and style files into minifiles */
-    public function minify(int $id = 0, string $type = ''): ResponseInterface 
+    public function minify(int $id = 0, string $type = ''): int 
     {
         if ($id) {
             if ($row = $this->model->find((int) $id, 'active, name, resource')) {
@@ -245,6 +256,6 @@ final class Theme extends AdminController
                 }
             }
         }
-        return $this->respondUpdated($id, lang('Admin.navbar.msg.msg_update'));
+        return $this->successfulResponse($id);
     }
 }

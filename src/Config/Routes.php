@@ -1,11 +1,21 @@
 <?php
-
 use Sygecon\AdminBundle\Config\AccessControl;
+
 /**
  * User profile
 **/
 $routes->addRedirect('profile', 'user');
 
+/**
+ * Me Captcha
+**/
+$routes->post('api/captcha/get', 
+    '\Sygecon\AdminBundle\Controllers\Api\AspCaptcha::meAnchor'
+);
+
+/**
+ * Administrative panel Resources
+**/
 $routes->group('api', ['filter' => AccessControl::FILTER['direction']],
     function ($routes) {
         $routes->group('photo', ['namespace' => 'Sygecon\AdminBundle\Controllers\Api'], 
@@ -64,7 +74,7 @@ $routes->group('user', [
 });
 
 /**
- * Sygecon\AdminBundle routes.
+ * Administration Panel
 **/
 $routes->group(SLUG_ADMIN, ['filter' => AccessControl::FILTER['direction']],
     function ($routes) {
@@ -162,13 +172,6 @@ $routes->group(SLUG_ADMIN, ['filter' => AccessControl::FILTER['direction']],
             'filter'    => AccessControl::FILTER['backend'],
             'namespace' => 'Sygecon\AdminBundle\Controllers\Component'
         ], function ($routes) {
-
-            // $routes->get('block', 'Block::index');
-            // $routes->get('block/(:num)', 'Block::index/$1');
-            // $routes->get('block/(:segment)/(:num)', 'Block::$1/$2');
-            // $routes->post('block', 'Block::create');
-            // $routes->put('block/(:num)', 'Block::update/$1');
-            // $routes->delete('block/(:num)', 'Block::delete/$1');
             // Управление языками
             $routes->get('language', 'Language::index');
             $routes->get('language/(:segment)/(:num)', 'Language::$1/$2');
@@ -202,7 +205,10 @@ $routes->group(SLUG_ADMIN, ['filter' => AccessControl::FILTER['direction']],
 
             $routes->get('redirect', 'Redirect::index');
             $routes->put('redirect', 'Redirect::update');
-
+            // Карта сайта
+            $routes->get('structure', 'Structure::index');
+            $routes->get('structure/apply', 'Structure::applyData');
+            $routes->put('structure', 'Structure::update');
         }); 
         
         // Каталог страниц
@@ -282,7 +288,7 @@ $routes->group(SLUG_ADMIN, ['filter' => AccessControl::FILTER['direction']],
             ], function ($routes) {
                 // Текстовые данные
                 $routes->get('data', 'TextData::index');
-                $routes->get('data/(:num)', 'TextData::index/$1');
+                $routes->get('data/(:num)', 'TextData::view/$1');
                 $routes->get('data/(:num)/(:segment)', 'TextData::$2/$1');
                 $routes->put('data/(:num)', 'TextData::update/$1');
                 $routes->post('data', 'TextData::create');
@@ -290,19 +296,12 @@ $routes->group(SLUG_ADMIN, ['filter' => AccessControl::FILTER['direction']],
                 
                 // Текстовые данные
                 $routes->get('resource', 'Resource::index');
-                $routes->get('resource/(:num)', 'Resource::index/$1');
+                $routes->get('resource/(:num)', 'TextData::view/$1');
                 $routes->get('resource/(:num)/(:segment)', 'Resource::$2/$1');
                 $routes->put('resource/(:num)', 'Resource::update/$1');
                 $routes->post('resource', 'Resource::create');
                 $routes->delete('resource/(:num)', 'Resource::delete/$1');
             }
         );
-        // $routes->resource('permission', [
-            //     'filter'     => 'permission:manage-user',
-            //     'namespace'  => 'boilerplate\Controllers\Users',
-            //     'controller' => 'PermissionController',
-            //     'except'     => 'show, new',
-            // 
-        //]);
     }
 );

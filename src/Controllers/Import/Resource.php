@@ -1,7 +1,6 @@
 <?php
 namespace Sygecon\AdminBundle\Controllers\Import;
 
-use CodeIgniter\HTTP\ResponseInterface;
 use Sygecon\AdminBundle\Controllers\AdminController;
 use Sygecon\AdminBundle\Models\ImportModel as BaseModel;
 use Sygecon\AdminBundle\Libraries\Table\SheetForge;
@@ -24,96 +23,94 @@ class Resource extends AdminController
         $this->model = new BaseModel();
     }
 
-     /**
-     * @return ResponseInterface
+    /**
+     * @return string
      */
-    public function index(int $id = 0): ResponseInterface 
+    public function index(): string 
     {
-        if ($this->request->getMethod() !== 'get') {
-            return $this->fail(lang('Admin.IdNotFound'));
-        }
-        if ($id) {
-            return $this->respond($this->build('config_edit', $this->edit((int) $id), 'Import'), 200);
-        }
+        if (strtolower($this->request->getMethod()) !== 'get') return $this->pageNotFound();
 
         if ($this->request->isAJAX()) {
             if ($data = $this->model->findAllByType($this->config->type)) {
-                return $this->respond(jsonEncode($data, false), 200);
+                return $this->successfulResponse($data);
             }
-            return $this->respond('[]', 200);
+            return $this->successfulResponse([]);
         }
 
-        return $this->respond($this->build($this->config->page, [
+        return $this->build($this->config->page, [
             'sheets' => $this->model->getSheets(),
             'head' => ['icon' => $this->config->icon, 'title' => lang($this->config->title)]
-        ], 'Import'), 200);
+        ], 'Import');
+    }
+
+    public function view(int $id = 0): string 
+    {
+        if (strtolower($this->request->getMethod()) !== 'get') return $this->pageNotFound();
+        if (! $data = $this->edit((int) $id)) return $this->pageNotFound();
+        
+        return $this->build('config_edit', $data, 'Import');
     }
     
     /**
-     * Create a new resource object, from "posted" parameters.
-     * @return ResponseInterface
+     * Create a new object.
+     * @return string
      */
-    public function create(): ResponseInterface 
+    public function create(): string
     {
         $data = $this->postDataValid($this->request->getPost());
-        if (isset($data['name']) === false) { return $this->fail(lang('Admin.IdNotFound')); }
+        if (isset($data['name']) === false) return $this->pageNotFound();
             
         $data['name'] = toSnake($data['name']);
         $data['title'] = mb_ucfirst($data['title']);
         $data['type'] = $this->config->type;
-        if (! $id = $this->model->insert($data)) {
-            return $this->fail(lang('Admin.IdNotFound'));
-        }
 
-        return $this->respondCreated($id, lang('Admin.navbar.msg.msg_insert')); //
+        if (! $id = $this->model->insert($data)) return $this->pageNotFound();
+        return $this->successfulResponse($id);
     }
 
     /**
-     * Add or update a model resource, from "posted" properties.
+     * Update a model resource.
      * @param int $id
-     * @return ResponseInterface
+     * @return string
      */
-    public function update(int $id = 0): ResponseInterface 
+    public function update(int $id = 0): string
     {
-        if (! $id) return $this->fail(lang('Admin.IdNotFound'));
-        if (! $data = $this->request->getRawInput()) { return $this->fail(lang('Admin.IdNotFound')); }
+        if (! $id) return $this->pageNotFound();
+        if (! $data = $this->request->getRawInput()) return $this->pageNotFound();
+
         if (isset($data['json'])) { 
             if (! $row = $this->model->find((int) $id, 'name')) { 
-                return $this->fail(lang('Admin.IdNotFound'));
+                return $this->pageNotFound();
             }
             $this->model->writeToFile($row->name, $data['json']);
-            return $this->respondUpdated($id, lang('Admin.navbar.msg.msg_update'));
+            return $this->successfulResponse($id);
         }
-
-        if (! isset($data['title'])) { return $this->fail(lang('Admin.IdNotFound')); }
+        if (! isset($data['title'])) return $this->pageNotFound();
+        
         if (isset($data['name'])) { unset($data['name']); }
-        if ($this->model->update((int) $id, $data) === false) { 
-            return $this->fail(lang('Admin.IdNotFound'));
-        }
-        return $this->respondUpdated($id, lang('Admin.navbar.msg.msg_update'));
+        if ($this->model->update((int) $id, $data) === false) return $this->pageNotFound();
+        return $this->successfulResponse($id);
     }
 
     /**
-     * Delete the designated resource object from the model.
+     * Delete the object from the model.
      * @param int $id
-     * @return ResponseInterface
+     * @return string
      */
-    public function delete(int $id = 0): ResponseInterface 
+    public function delete(int $id = 0): string 
     {
-        if (! $id) { return $this->fail(lang('Admin.IdNotFound')); }
-
-        if ($this->model->remove((int) $id) === false) {
-            return $this->failNotFound(lang('Admin.navbar.msg.msg_get_fail'));
+        if ($id && $this->model->remove((int) $id) === true) {
+            return $this->successfulResponse($id);
         }
-        return $this->respondDeleted($id, lang('Admin.navbar.msg.msg_delete'));
+        return $this->pageNotFound();
     }
 
     // Генерируем стартовый шаблон для импорта
-    public function template(int $id = 0): ResponseInterface 
+    public function template(int $id = 0): string
     {
-        if (! $id) { return $this->fail(lang('Admin.IdNotFound')); }
+        if (! $id) return $this->pageNotFound();
         if (! $tmplName = $this->model->getTemplateName((int) $id)) { 
-            return $this->fail(lang('Admin.IdNotFound'));
+            return $this->pageNotFound();
         }
 
         $result = [
@@ -127,12 +124,12 @@ class Resource extends AdminController
         ];
 
         // Ресурсы
-        if ($this->config->type === 'resource') { return $this->respond('[]', 200); }
+        if ($this->config->type === 'resource') { return '[]'; }
 
         // Текстовые данные
         $sheetModel = new SheetForge($tmplName);
         $result['fields'] = jsonDecode($sheetModel->getFrame());
-        if (! isset($result['fields']['fields'])) { return $this->respond('[]', 200); }
+        if (! isset($result['fields']['fields'])) { return '[]'; }
 
         $result['fields'] = $result['fields']['fields'];
         $fields = &$result['fields'];
@@ -220,8 +217,7 @@ class Resource extends AdminController
             'dataType'  => 'date', 
             'callback'  => 'sitemap'
         ];
-
-        return $this->respond(jsonEncode($result, false), 200);
+        return $this->successfulResponse($result, true);
     }
 
     /**
@@ -232,8 +228,8 @@ class Resource extends AdminController
      */
     private function edit(int $id): ?array 
     {
-        if (! $row = $this->model->find($id, 'name, title')) { return null; }
-        
+        if (! $id) return null;
+        if (! $row = $this->model->find($id, 'name, title')) return null;
         return [
             'id' => (int) $id,
             'data' => esc($this->model->readFromFile($row->name)),

@@ -20,5 +20,5 @@
 <!-- Section content -->
 <?= $this->section('scripts') ?>
     <script async src="/assets/js/components/asp.save.form.js"></script>
-    <script async src="/control/assets/js/imgtofile.<?= $valid_hash ?>.js"></script>
+    <script async src="/control/assets/js/imgtofile-<?= $valid_hash ?>.js"></script>
 <?= $this->endSection() ?>

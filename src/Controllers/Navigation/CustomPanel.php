@@ -1,7 +1,6 @@
 <?php
 namespace Sygecon\AdminBundle\Controllers\Navigation;
 
-use CodeIgniter\HTTP\ResponseInterface;
 use Sygecon\AdminBundle\Controllers\AdminController;
 use Sygecon\AdminBundle\Models\Navigation\CustomPanelModel as BaseModel;
 
@@ -17,106 +16,98 @@ final class CustomPanel extends AdminController
         $this->model = new BaseModel();
     }
 
-    public function index(int $id = 0): ResponseInterface 
+    public function index(int $id = 0): string 
     {
-        if ($this->request->getMethod() !== 'get') {
-            return $this->fail(lang('Admin.IdNotFound'));
-        }
+        if (strtolower($this->request->getMethod()) !== 'get') return $this->pageNotFound();
+        
         if ($this->request->isAJAX()) {
             if ($data = $this->model->findAll('name', false)) {
-                return $this->respond(jsonEncode($data, false), 200);
+                return $this->successfulResponse($data);
             }
-            return $this->respond('[]', 200);
+            return $this->successfulResponse([]);
         }
 
-        if ($id) {
-            return $this->respond(
-                $this->build('custom_panel_edit', $this->edit($id), 'Navigation')
-            , 200);
-        }
-
-        return $this->respond($this->build('custom_panels', [
+        if ($id) return $this->build('custom_panel_edit', $this->edit($id), 'Navigation');
+        
+        return $this->build('custom_panels', [
             'head' => [
                 'icon' => 'menu-button-wide', 
                 'title' => lang('Admin.menu.sidebar.navPanelsDesc')
             ]
-        ], 'Navigation'), 200);
+        ], 'Navigation');
     }
 
     /**
-     * Create a new resource object, from "posted" parameters.
-     * @return array an array
+     * Create a new object.
+     * @return string
      */
-    public function create(): ResponseInterface 
+    public function create(): string
     {
         $data = $this->postDataValid($this->request->getPost(), 32, 128);
-        //return jsonEncode($dataPost, false);
-        if (! isset($data['name'])) {
-            return $this->fail(lang('Admin.IdNotFound'));
-        }
+        if (! isset($data['name'])) return $this->pageNotFound();
+
         helper('path');
         $data['name'] = toSnake($data['name']);
         if (strlen($data['name']) > 3) {
             if ($id = $this->model->insert($data)) {
-                return $this->respondCreated($id, lang('Admin.navbar.msg.msg_insert'));
+                return $this->successfulResponse($id);
             }
         }
-        return $this->fail(lang('Admin.IdNotFound'));
+        return $this->pageNotFound();
     }
 
     /**
-     * Add or update a model resource, from "posted" properties.
+     * Update a object.
      * @param int $id
-     * @return array an array
+     * @return string
      */
-    public function update(int $id = 0): ResponseInterface 
+    public function update(int $id = 0): string
     {
         $data = $this->postDataValid($this->request->getRawInput(), 32, 128);
-        if (!$data) { return $this->fail(lang('Admin.IdNotFound')); }
+        if (! $data) return $this->pageNotFound();
         $oldData = $this->model->find((int)$id, 'name');
-        if (!isset($oldData) || !$oldData) { return $this->fail(lang('Admin.IdNotFound')); }
+        if (! isset($oldData) || !$oldData) return $this->pageNotFound();
         $path = WRITEPATH . 'base' . DIRECTORY_SEPARATOR . castingPath($this->path, true);
         cache()->delete(self::CACHE_PREFIX . $oldData->name);
 
         helper('path');
         if (isset($data['data'])) {
             if (! writingDataToFile($path . DIRECTORY_SEPARATOR . $oldData->name . '.json', $data['data'])) {
-                return $this->fail(lang('Admin.IdNotFound'));
+                return $this->pageNotFound();
             }
-            return $this->respondUpdated($id, lang('Admin.navbar.msg.msg_update'));
+            return $this->successfulResponse($id);
         }
-        if (! isset($data['name'])) {
-            return $this->fail(lang('Admin.IdNotFound'));
-        }
+        if (! isset($data['name'])) return $this->pageNotFound();
         $data['name'] = toSnake($data['name']);
         if (strlen($data['name']) > 3) {
-            if (!$this->model->update($id, $data)) { return $this->fail(lang('Admin.IdNotFound')); }
-            if ($oldData->name  !== $data['name']) {
+            if (! $this->model->update($id, $data)) return $this->pageNotFound();
+            if ($oldData->name !== $data['name']) {
                 helper('files');
                 renameFile($path, $oldData->name . '.json', $data['name']);
             }
         }
-        return $this->respondUpdated($id, lang('Admin.navbar.msg.msg_update'));
+        return $this->successfulResponse($id);
     }
 
     /**
      * Delete the designated resource object from the model.
      * @param int $id
      */
-    public function delete(int $id = 0): ResponseInterface 
+    public function delete(int $id = 0): string 
     {
-        //if (!$this->model->delete($id)) {
-            return $this->failNotFound(lang('Admin.navbar.msg.msg_get_fail'));
+        // if (! $this->model->delete($id)) {
+            return $this->pageNotFound();
         // }
-        // return $this->respondDeleted($id, lang('Admin.navbar.msg.msg_delete'));
+        // return $this->successfulResponse($id);
     }
     
     /**
      * Return the editable properties of a resource object.
      * @param int $id
-     * @return array an array
+     * @return array
      */
-    private function edit(int $id = 0): ?array {
+    private function edit(int $id = 0): ?array 
+    {
         // Редактор данных меню JSON 
         if (! $row = $this->model->find((int) $id, 'name, title')) { return null; }
 

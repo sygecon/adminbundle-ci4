@@ -1,7 +1,6 @@
 <?php
 namespace Sygecon\AdminBundle\Controllers\Template;
 
-use CodeIgniter\HTTP\ResponseInterface;
 use Sygecon\AdminBundle\Controllers\AdminController;
 use Sygecon\AdminBundle\Models\Template\LayoutModel as BaseModel;
 
@@ -13,34 +12,28 @@ class Layout extends AdminController
         $this->model = new BaseModel();
     }
 
-    public function index(int $id = 0): ResponseInterface 
+    public function index(int $id = 0): string 
     {
-        if ($this->request->getMethod() !== 'get') { return $this->fail(lang('Admin.IdNotFound')); }
+        if (strtolower($this->request->getMethod()) !== 'get') return $this->pageNotFound(); 
         
-        if ($id) {
-            return $this->respond(
-                $this->build('layout_edit', $this->edit((int) $id), 'Template')
-            , 200);
-        }
-
-        return $this->respond($this->build('layout', ['head' => 
+        if ($id) return $this->build('layout_edit', $this->edit((int) $id), 'Template');
+        
+        return $this->build('layout', ['head' => 
             ['icon' => 'layout-text-sidebar', 'title' => lang('Admin.menu.sidebar.layoutsDesc')]
-        ], 'Template'), 200);
+        ], 'Template');
     }
 
     /**
-     * Add or update a model resource, from "posted" properties.
+     * Update a object.
      * @param int $id
-     * @return array an array
+     * @return string
      */
-    public function update(int $id = 0): ResponseInterface 
+    public function update(int $id = 0): string 
     {
-        if (! $id) { return $this->fail(lang('Admin.IdNotFound')); }
-        if (! $data = $this->request->getRawInput()) { 
-            return $this->fail(lang('Admin.IdNotFound')); 
-        }
-        $this->model->clearCache();
+        if (! $id) return $this->pageNotFound();
+        if (! $data = $this->request->getRawInput()) return $this->pageNotFound();
         
+        $this->model->clearCache();
         if (array_key_exists('block_id', $data)) {
             if (isset($data['action']) && $data['action']) {
                 if ($data['action'] === 'add') {
@@ -49,22 +42,22 @@ class Layout extends AdminController
                     $this->model->setModel((int) $id);
                 }
             }
-            return $this->respondUpdated($id, lang('Admin.navbar.msg.msg_update'));
+            return $this->successfulResponse($id);
         }
 
         $data = $this->postDataValid($data);
         if (! $oldData = $this->model->find((int)$id, 'name')) {
-            return $this->fail(lang('Admin.IdNotFound'));
+            return $this->pageNotFound();
         }
 
         if (isset($data['data'])) {
             if ($this->fileLayout($oldData->name, $data['data']) === false) {
-                return $this->fail(lang('Admin.IdNotFound'));
+                return $this->pageNotFound();
             }
-            return $this->respondUpdated($id, lang('Admin.navbar.msg.msg_update'));
+            return $this->successfulResponse($id);
         } 
 
-        if (! isset($data['title'])) { return $this->fail(lang('Admin.IdNotFound')); }
+        if (! isset($data['title'])) return $this->pageNotFound();
         if (array_key_exists('name', $data)) { 
             $data['name'] = mb_strtolower(trim($data['name']));
             if ($data['name']) {
@@ -78,40 +71,33 @@ class Layout extends AdminController
             }
         }
 
-        if ($this->model->update($id, $data) === false) { 
-            return $this->fail(lang('Admin.IdNotFound')); 
-        }
-        return $this->respondUpdated($id, lang('Admin.navbar.msg.msg_update'));
+        if ($this->model->update($id, $data) === false) return $this->pageNotFound(); 
+        return $this->successfulResponse($id);
     }
 
     /**
-     * Create a new resource object, from "posted" parameters.
-     * @return array an array
+     * Create a new object.
+     * @return string
      */
-    public function create(): ResponseInterface 
+    public function create(): string 
     {
         $data = $this->postDataValid($this->request->getPost());
-        if (isset($data['name']) && mb_strlen($data['name']) > 3) {
-            if ($id = $this->model->insert($data)) {
-                $this->model->clearCache();
-                return $this->respondCreated($id, lang('Admin.navbar.msg.msg_insert')); //
-            }
-        }
-        return $this->fail(lang('Admin.IdNotFound'));
+        $id = $this->model->create($data);
+        return ($id ? $this->successfulResponse($id) : $this->pageNotFound());
     }
 
     /**
-     * Delete the designated resource object from the model.
+     * Delete object from the model.
      * @param int $id
+     * @return string
      */
-    public function delete(int $id = 0): ResponseInterface 
+    public function delete(int $id = 0): string 
     {
-        if (!$id) return $this->fail(lang('Admin.IdNotFound'));
-        if (!$this->model->delete($id)) {
-            return $this->failNotFound(lang('Admin.navbar.msg.msg_get_fail'));
+        if ($id && $this->model->delete($id)) {
+            $this->model->clearCache();
+            return $this->successfulResponse($id);
         }
-        $this->model->clearCache();
-        return $this->respondDeleted($id, lang('Admin.navbar.msg.msg_delete'));
+        return $this->pageNotFound();
     }
     
     /**
@@ -142,6 +128,7 @@ class Layout extends AdminController
         if (! $name) { return ''; }
         helper('path');
         $fileName = templateFile(PATH_LAYOUT . DIRECTORY_SEPARATOR . trim($name, ' /\\'));
+
         if ($data !== null && is_string($data)) { 
             return (writingDataToFile($fileName, $data) !== false ? true : false); 
         }

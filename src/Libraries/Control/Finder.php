@@ -235,6 +235,6 @@ final class Finder
     private function checkClassName(string $className = ''): bool
     {
         if (! $str = basename(strtolower(trim($className)), '.php')) { return false; }
-        return (bool) (in_array($str, Paths::FILTER_CLASS_NAME) === false);
+        return (bool) (in_array($str, Paths::FORBID_CLASS_NAMES) === false);
     }
 }

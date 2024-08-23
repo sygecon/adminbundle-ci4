@@ -4,17 +4,8 @@ namespace {namespace};
 
 use {useStatement};
 
-<?php if ($type === 'controller'): ?>
-
-use CodeIgniter\API\ResponseTrait;
-<?php endif ?>
-use CodeIgniter\HTTP\ResponseInterface;
-
 final class {class} extends {extends}
 {
-<?php if ($type === 'controller'): ?>
-    use ResponseTrait;
-<?php endif ?>
     protected $modelName    = '';
     protected $layout       = '';
     protected $cacheTime    = 60;
@@ -187,13 +178,13 @@ final class {class} extends {extends}
     
     /**
      * Return the properties of a page
-     * @return ResponseInterface
+     * @return html
     */
-    public function index(): ResponseInterface
+    public function index()
     {
         //$this->layuot = 'about';
         $cacheName = $this->cacheName();
-        if ($foo = cache($cacheName)) { return $this->respond($foo, 200); }
+        if ($foo = cache($cacheName)) return $foo;
 
         if (! $foo = $this->initModel()
             ->getPage(true)
@@ -202,19 +193,19 @@ final class {class} extends {extends}
             return $this->pageNotFound(); 
         }
 
-        if ($foo && $this->cacheTime) { cache()->save($cacheName, $foo, $this->cacheTime); }
-        return $this->respond($foo, 200);
+        if ($foo && $this->cacheTime) cache()->save($cacheName, $foo, $this->cacheTime);
+        return $foo;
     }
     
     /**
      * Return the properties of a list page
-     * @return ResponseInterface
+     * @return html
      */
-    public function view(string ...$slug): ResponseInterface
+    public function view(string ...$slug)
     {
         //$this->layuot = 'about_list';
         $cacheName = $this->cacheName();
-        if ($foo = cache($cacheName)) { return $this->respond($foo, 200); }
+        if ($foo = cache($cacheName)) return $foo;
 
         if (! $foo = $this->initModel()
             ->getChildPages()
@@ -223,8 +214,8 @@ final class {class} extends {extends}
             return $this->pageNotFound(); 
         }
         
-        if ($foo && $this->cacheTime) { cache()->save($cacheName, $foo, $this->cacheTime); }
-        return $this->respond($foo, 200);
+        if ($foo && $this->cacheTime) cache()->save($cacheName, $foo, $this->cacheTime);
+        return $foo;
     }
 
 <?php endif ?>
