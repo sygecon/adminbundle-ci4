@@ -2,8 +2,9 @@
 
 use CodeIgniter\Database\Migration;
 use Config\Boot\NestedTree;
-/// php spark migrate -all
-class Migration_create_catalog_table extends Migration
+
+// php spark migrate -all
+class MigrationCatalog extends Migration
 {
 	public function up()
     {

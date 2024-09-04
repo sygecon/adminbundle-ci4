@@ -2,7 +2,7 @@
 
 use CodeIgniter\Database\Migration;
 
-class Migration_create_import_table extends Migration
+class MigrationImportData extends Migration
 {
 	public function up()
     {
