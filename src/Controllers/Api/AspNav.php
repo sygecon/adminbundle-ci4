@@ -25,7 +25,7 @@ final class AspNav extends AdminController
             if (defined('SLUG_ADMIN') && SLUG_ADMIN) {
                 $data = str_replace('{direction}', SLUG_ADMIN, $data);
             }
-            $items = jsonDecode($data, true);
+            $items = jsonDecode($data);
             $data = '';
             foreach ($items as $i => &$item) {
                 if (isset($item[self::VALID_KEY])) {
