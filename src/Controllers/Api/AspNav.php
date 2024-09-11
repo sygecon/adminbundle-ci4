@@ -5,9 +5,9 @@ use Sygecon\AdminBundle\Controllers\AdminController;
 
 final class AspNav extends AdminController 
 {
-    private const VALID_KEY = 'permission';
-    private const CACHE_PREFIX = 'Admin_apiNavAdmin_';
-    private const PATH_NAV = 'control' . DIRECTORY_SEPARATOR . 'nav' . DIRECTORY_SEPARATOR;
+    private const VALID_KEY     = 'permission';
+    private const CACHE_PREFIX  = 'Admin_apiNavAdmin_';
+    private const PATH_NAV      = 'control' . DIRECTORY_SEPARATOR . 'nav' . DIRECTORY_SEPARATOR;
 
     public function me_admin(string $slug = 'menu'): string 
     {
@@ -22,7 +22,10 @@ final class AspNav extends AdminController
 
         // Пересбор
         if ($slug === 'sidebar') { 
-            $items = jsonDecode($data);
+            if (defined('SLUG_ADMIN') && SLUG_ADMIN) {
+                $data = str_replace('{direction}', SLUG_ADMIN, $data);
+            }
+            $items = jsonDecode($data, true);
             $data = '';
             foreach ($items as $i => &$item) {
                 if (isset($item[self::VALID_KEY])) {
