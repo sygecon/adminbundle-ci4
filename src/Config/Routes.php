@@ -61,7 +61,6 @@ $routes->group('api', ['filter' => AccessControl::FILTER['direction']],
  * User routes.
 **/
 $routes->group('user', [
-    //'filter'    => AccessControl::FILTER['direction'],
     'namespace' => 'Sygecon\AdminBundle\Controllers\Users',
 ], function ($routes) {
     $routes->get('password-reset', 'PasswordControl::reset');
@@ -69,8 +68,8 @@ $routes->group('user', [
     $routes->get('set-password', 'PasswordControl::index');
     $routes->post('set-password', 'PasswordControl::update');
 
-    $routes->get('/', 'Profile');
-    $routes->get('/(:segment)', 'Profile::index/$1');
+    $routes->get('/', 'Profile::index');
+    $routes->get('/(:segment)', 'Profile::view/$1');
 });
 
 /**
@@ -94,7 +93,7 @@ $routes->group(SLUG_ADMIN, ['filter' => AccessControl::FILTER['direction']],
                 $routes->get('(:num)', 'Manage::index/$1');
                 $routes->get('(:segment)/(:num)', 'Manage::$1/$2');
                 $routes->get('(:num)/(:segment)', 'Manage::$2/$1');
-                $routes->post('', 'Manage::create');
+                $routes->post('', 'Manage::create/staff');
                 $routes->post('(:num)/(:segment)', 'Manage::set_$2/$1');
                 $routes->put('(:num)', 'Manage::update/$1');
                 $routes->delete('(:num)', 'Manage::delete/$1');
@@ -109,6 +108,7 @@ $routes->group(SLUG_ADMIN, ['filter' => AccessControl::FILTER['direction']],
                 $routes->get('(:num)', 'Manage::index/$1/clients');
                 $routes->get('(:segment)/(:num)', 'Manage::$1/$2');
                 $routes->get('(:num)/(:segment)', 'Manage::$2/$1');
+                $routes->post('', 'Manage::create/client');
                 $routes->post('(:num)/(:segment)', 'Manage::set_$2/$1');
                 $routes->put('(:num)', 'Manage::update/$1');
                 $routes->delete('(:num)', 'Manage::delete/$1');

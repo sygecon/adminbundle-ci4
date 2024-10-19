@@ -1,48 +1,30 @@
 <?php
 namespace Sygecon\AdminBundle\Controllers\Users;
 
-use CodeIgniter\Database\BaseConnection;
-use CodeIgniter\Database\Exceptions\DatabaseException;
-use Config\Database;
 use Config\AuthGroups;
-use Config\Boot\NestedTree;
+use Config\Encryption;
+use Sygecon\AdminBundle\Models\UserModel;
 use Sygecon\AdminBundle\Config\UserControl;
 use Sygecon\AdminBundle\Config\Paths;
 use Sygecon\AdminBundle\Controllers\AdminController;
 use Sygecon\AdminBundle\Libraries\ImageResizer;
-use Sygecon\AdminBundle\Libraries\Control\EncryptionOpenSSL;
-use Throwable;
 
 final class Manage extends AdminController 
 {
-    private const COL_RELATED           = 'relatеd';
-    private const USER_DETAILS_TABLE    = 'user_details';
-
-    private $db;
-
     protected $helpers = ['request'];
 
-    public function __construct() {
-        try {
-            $this->db = Database::connect(NestedTree::DB_GROUP);
-        } catch (Throwable $th) {
-            throw new DatabaseException($th->getMessage());
-        }
-    }
+    protected $model;
 
-    /** * Destructor */
-    public function __destruct() 
-    {
-        if ($this->db instanceof BaseConnection) { 
-            $this->db->close(); 
-        }
+    public function __construct() {
+        $this->model = new UserModel();
     }
 
     public function index(int $userId = 0, string $releted = 'staff'): string 
     {
-        if (strtolower($this->request->getMethod())  !== 'get') return $this->pageNotFound();
-        
-        if ($this->request->isAJAX()) {
+        if (strtolower($this->request->getMethod()) !== 'get') return $this->pageNotFound();
+        if (! $user = auth()->user()) return $this->pageNotFound();
+
+        if (true === $this->request->isAJAX()) {
             if ($userId) {
                 $data = [];
                 $data['dataBasic'] = $this->getData($userId, $releted);
@@ -67,11 +49,20 @@ final class Manage extends AdminController
                 'model_name' => $releted
             ], 'User');
         }
-
-        return $this->build('manage_' . $releted, ['head' => [
-            'icon' => 'people', 
-            'title' => lang('Admin.user.pageManageHeadTitle')
-        ]], 'User');
+        
+        $data = [
+            'head' => [
+                'icon' => 'people', 
+                'title' => lang('Admin.user.pageManageHeadTitle')
+            ]
+        ];
+        if (true === $user->inGroup('superadmin')) {
+            $groups = $this->getGroups();
+            if (isset($groups['superadmin'])) unset($groups['superadmin']);
+            $data['groups']  = array_reverse($groups);
+            $data['date_create'] = meDate('', 'j M Y');
+        }
+        return $this->build('manage_' . $releted, $data, 'User');
     }
 
     /**
@@ -84,7 +75,7 @@ final class Manage extends AdminController
         $res = 'error';
         if (! $userId) return $this->successfulResponse($res);
 
-        $imageExt = ['png', 'svg', 'gif', 'webp', 'jpg', 'jpeg', 'ico', 'svgz', 'bmp', 'xbm', 'pjp', 'jfif', 'pjpeg', 'avif'];
+        $imageExt = ['png', 'svg', 'gif', 'webp', 'jpg', 'jpeg', 'svgz', 'bmp', 'xbm', 'pjp', 'jfif', 'pjpeg', 'avif'];
         $resp = getRequestPut();
         if (! isset($resp->ext) || ! isset($resp->data) || ! in_array($resp->ext, $imageExt)) { 
             return $this->successfulResponse($res);
@@ -114,6 +105,26 @@ final class Manage extends AdminController
     }
 
     /**
+     * Creating user
+     * @param string $relatеd
+     * @return string
+     */
+    public function create(string $relatеd = 'staff'): string
+    {
+        if (false === $this->request->isAJAX()) return $this->pageNotFound();
+        $data = $this->postTokenValid($this->request->getPost());
+        if (! isset($data) || ! $data) return $this->pageNotFound(); 
+
+        if (isset($data['created_at'])) unset($data['created_at']);
+        $data['lang_id']    = (int) langIdFromName();
+        $data['relatеd']    = trim(strip_tags($relatеd));
+        $active             = ($data['relatеd'] === 'staff' ? true : false);
+        
+        if ($id = $this->model->createUser($data, $active)) return $this->successfulResponse($id);
+        return $this->pageNotFound();
+    }
+
+    /**
      * Updating object data.
      * @param int $userId
      * @return string
@@ -121,106 +132,55 @@ final class Manage extends AdminController
     public function update(int $userId = 0): string 
     {
         if (! $userId) return $this->pageNotFound();  
-        if (! $this->request->isAJAX()) return $this->pageNotFound();
+        if (false === $this->request->isAJAX()) return $this->pageNotFound();
 
         $data = $this->postTokenValid($this->request->getRawInput());
-        // if ($_SERVER['REQUEST_METHOD'] === "PUT") parse_str(file_get_contents('php://input'), $data);
-        // if (!isset($data) || !$data) $data = $this->request->getPost();
         if (! isset($data) || ! $data) return $this->pageNotFound();
-        // Set User Active  
-        if (array_key_exists('active', $data)) {
-            $model = model('UserModel');
-            $val = 1;
-            if ($data['active'] && $data['active'] !== "0") $val = 0; 
 
-            if ($model->update((int)$userId, ['active' => $val])) {
-                return $this->successfulResponse($val);
+        // Activate / Deactivate an existing user by user Id 
+        if (array_key_exists('active', $data)) {
+            if ($this->model->activitySwitch((int) $userId)) {
+                return $this->successfulResponse($userId);
             }
             return $this->pageNotFound();
         }
 
-        // Normalize data
-        foreach ($data as $key => &$value) { 
-            if (in_array($key, ['lang_id', 'is_man', 'inn', 'postcode'])) {
-                $data[$key] = (int) toInt($value);
-            } else if (in_array($key, ['phone', 'second_phone'])) {
-                $data[$key] = toInt($value);
-            } else {
-                $data[$key] = strip_tags($value);
-            }
-        }
         // Is Login, Email ...
         if (isset($data['username'])) {
-            // Validate User Name
-            if (isset($data['username'])) {
-                if (! $this->validUsername($data['username'])) { unset($data['username']); }
-            }
-            // Validate E-Mail
-            if (isset($data['email'])) {
-                if (! $this->validEmail($data['email'])) { unset($data['email']); }
-            }
-            // Validate Phone
-            if (isset($data['phone'])) {     
-                if (! $this->validPhone($data['phone'])) { unset($data['phone']); }
-            }
-            
-            $users = model('UserModel');
-            $user = $users->findById((int) $userId);
-            if (isset($user) && $user) {
-                // Group from user
-                if (isset($data['group'])) {
-                    $newGroup = $data['group'];
-                    unset($data['group']);
-                    if ($newGroup && strtolower($newGroup) !== strtolower($user->getGroups()[0])) {
-                        $user->syncGroups($newGroup);
-                        cache()->delete("{$userId}_groups");
-                        cache()->delete("{$userId}_permissions");
-                    }
-                }
-                // Language
-                if (isset($data['lang_id'])) {
-                    if (! $data['lang_id'] || $data['lang_id'] == $user->lang_id) { 
-                        unset($data['lang_id']); 
-                    }
-                }
-                $user->fill($data);
-                $users->save($user);
-
+            if ($this->model->update((int) $userId, $data)) {
                 return $this->successfulResponse($userId);
             }
             return $this->pageNotFound();
         }
 
         // Is Personal User Data
-        $dataNew = $this->getFieldsUserData($this->getRelatеd($userId));
+        $relatеd = $this->model->findRelated($userId);
+        $dataNew = $this->getFieldsUserData($relatеd);
+
         foreach ($data as $key => &$value) {
             if (array_key_exists($key, $dataNew)) {
+                $val = $this->model->normalizeData($key, $value);
                 $row = &$dataNew[$key];
                 if ($row['type'] === 'text' || $row['type'] === 'textarea') {
-                    if ($row['max']) { $value = mb_strimwidth($value, 0, $row['max']); }
-                } else if (! $value) { 
-                    if ($row['type'] === 'date' || $row['type'] === 'datetime') { $value = null; }
-                } else if ($row['type'] === 'tel' && strlen($value) < 10) { $value = ''; }
-                $row['value'] = $value;
+                    if ($row['max']) $val = mb_strimwidth($val, 0, $row['max']);
+                } else 
+                if (! $val) { 
+                    if ($row['type'] === 'date' || $row['type'] === 'datetime') $val = null;
+                } else 
+                if ($row['type'] === 'tel' && strlen($val) < 10) $val = ''; 
+                $row['value'] = $val;
             }
             unset($data[$key]);
         }
         unset($data);
         if (! $dataNew) return $this->pageNotFound();
 
-        $dataNew = [ 'data' => $this->encrypt(jsonEncode($dataNew, false)) ];
-        $builder = $this->db->table(self::USER_DETAILS_TABLE);
-        $row = $builder->select('user_id')->where('user_id', (int) $userId)->get()->getRow();
-        
-        $this->db->transStart();
-        if (isset($row) && $row) {
-            $builder->set($dataNew)->where('user_id', (int) $userId)->update();
-        } else {
-            $dataNew['user_id'] = (int) $userId;
-            $builder->set($dataNew)->insert();
+        $secret = $this->encryptionData(jsonEncode($dataNew, false), $userId, true);
+
+        if ($this->model->updateUserData((int) $userId, $secret)) {
+            return $this->successfulResponse($userId);
         }
-        $this->db->transComplete();
-        return $this->successfulResponse($userId);
+        return $this->pageNotFound();
     }
 
     /**
@@ -228,18 +188,10 @@ final class Manage extends AdminController
      * @param int $userId
      * @return string
      */
-    public function delete(int $userId = 0): string 
+    public function delete(int $userId): string 
     {
-        if (! $userId) return $this->pageNotFound();
-        $users = model('UserModel');
-        $user = $users->findById((int) $userId);
-        if ($user && ! $user->inGroup('superadmin')) {
-            $users->delete((int) $userId, true);
-            cache()->delete("{$userId}_groups");
-            cache()->delete("{$userId}_permissions");
-            return $this->successfulResponse($userId);
-        } 
-        return $this->pageNotFound();
+        if (! $this->model->delete((int) $userId)) return $this->pageNotFound();
+        return $this->successfulResponse($userId);
     }
 
     /**
@@ -260,25 +212,15 @@ final class Manage extends AdminController
      */
     public function getUserData(int $userId = 0): string 
     {
-        if (! $userId) $this->successfulResponse([], true);
-        $text = '';
-        $relatеd = 'client';
-        try {
-            $builder = $this->db->table(self::USER_DETAILS_TABLE)->where('user_id', $userId);
-            if (! $row = $builder->get()->getRow()) { 
-                $this->successfulResponse([], true);
-            }
-        } catch (Throwable $th) {
-            $this->successfulResponse([], true);
-        }
+        if (! $userId) return $this->successfulResponse([], true);
 
-        $relatеd = $row->{self::COL_RELATED};
-        $text = $this->decrypt($row->data);
-        unset($row->{self::COL_RELATED}, $row->data, $row);
-        $data = [];
+        $relatеd = $this->model->findRelated($userId);
+        $text    = $this->model->findUserData($userId);
+        $text    = $this->encryptionData($text, $userId, false);
+        $data    = [];
 
         if (! $text) {
-            $fields = $this->getFieldsUserData($relatеd); //$this->db->getFieldNames(self::USER_DETAILS_TABLE);
+            $fields = $this->getFieldsUserData($relatеd);
             foreach ($fields as $key => $field) {
                 $data[$key] = $field['value'];
                 unset($fields[$key]);
@@ -340,87 +282,24 @@ final class Manage extends AdminController
     /** Get resource data Users. */
     private function getData(int $userId, string $releted): array 
     {
-        if (auth()->loggedIn()) {
-            $builder = $this->db->table('users')
-                ->select('users.*, auth_identities.secret as email, auth_groups_users.group') 
-                ->join('auth_identities', 'auth_identities.user_id = users.id')
-                ->join('auth_groups_users', 'auth_groups_users.user_id = users.id');
-            if ($userId) {
-                $builder = $builder->where('users.deleted_at', null)->where('users.id', (int) $userId);
-                if ($row = $builder->get()->getRowArray()) { return $row; }
-                return [];
-            } 
-            $builder = $builder->join(self::USER_DETAILS_TABLE, self::USER_DETAILS_TABLE . '.user_id = users.id')
-                ->where('users.deleted_at', null)
-                ->where(self::USER_DETAILS_TABLE . '.' . self::COL_RELATED, $releted)
-                ->orderBy('auth_groups_users.group');
-            return $builder->get()->getResult('array');
-        }
-        return [];
+        if ($userId) return $this->model->find($userId);
+        return $this->model->findAll($releted);
     }
 
-    private function getRelatеd(int $userId = 0): string 
+    private function encryptionData(string $text, int $userId, bool $encode): string
     {
-        if (! $userId) { return 'client'; }
-        try {
-            $builder = $this->db->table(self::USER_DETAILS_TABLE)
-                ->select(self::COL_RELATED)
-                ->where('user_id', (int) $userId);
+        $salt   = hash('crc32b', '__START_SYGECON_ID_' . (string) $userId . '_END__', false);
+        $config = new Encryption();
+        $config->driver     = 'OpenSSL';
+        $config->blockSize  = 16;
+        $config->digest     = 'SHA512';
+        $config->cipher     = 'AES-256-CTR';
+        $config->rawData    = false;
+        $config->key        = bin2hex(\hash_hkdf($config->digest, UserControl::ENCRYPT_KEY . $salt));
+        $encrypter          = service('encrypter', $config);
 
-            if (! $row = $builder->get()->getRowArray()) return 'client';
-            return (string) array_shift($row);
-        } catch (Throwable $th) {
-            return 'client';
-        }
-    }
-
-    /** Checks for a correctly formatted email address
-     * @param string $str
-     */
-    private function validEmail(?string $str = null): bool
-    {
-        if ($str === null) { return false; }
-        // emailRegExp = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
-        // @see https://regex101.com/r/wlJG1t/1/
-        if (function_exists('idn_to_ascii') && defined('INTL_IDNA_VARIANT_UTS46') && preg_match('#\A([^@]+)@(.+)\z#', $str ?? '', $matches)) {
-            $str = $matches[1] . '@' . idn_to_ascii($matches[2], 0, INTL_IDNA_VARIANT_UTS46);
-        }
-        if ((bool) filter_var($str, FILTER_VALIDATE_EMAIL)) {
-            $builder = $this->db->table('auth_identities')->select('1')->where('secret', $str)->limit(1);
-            $result = (bool) ($builder->get()->getRow() === null);
-            return $result;
-        }
-        return false;
-    }
-
-    private function validUsername(string $str = ''): bool
-    {
-        if (strlen($str) < 5) { return false; } 
-        if (preg_match('/\A[A-Z0-9 ~!#$%\&\*\-_+=|:.]+\z/i', $str) === 1) {
-            $builder = $this->db->table('users')->select('1')->where('username', $str)->limit(1);
-            $result = (bool) ($builder->get()->getRow() === null);
-            return $result;
-        }
-        return false;
-    }
-
-    private function validPhone(string $str = ''): bool
-    {
-        if (strlen($str) < 10) { return false; } 
-        $builder = $this->db->table('users')->select('1')->where('phone', $str)->limit(1);
-        $result = (bool) ($builder->get()->getRow() === null);
-        return $result;
-    }
-
-    private function encrypt(string $text = ''): string
-    {
-        $encrypter = new EncryptionOpenSSL(UserControl::ENCRYPT_KEY, UserControl::SALT);
-        return $encrypter->encrypt($text);
-    }
-
-    private function decrypt(string $text = ''): string
-    {
-        $encrypter = new EncryptionOpenSSL(UserControl::ENCRYPT_KEY, UserControl::SALT);
+        if (true === $encode) return $encrypter->encrypt($text);
         return $encrypter->decrypt($text);
     }
+
 }

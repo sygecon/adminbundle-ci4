@@ -61,20 +61,21 @@ final class Theme extends AdminController
         $data = $this->postDataValid($this->request->getPost());
         if (! isset($data['name'])) return $this->pageNotFound();
 
-        //helper('path'); toCamelCase = as Name, toSnake = as Folder Name
+        helper('path');
         $name = checkFileName($data['name']);
-        if (! $id && mb_strlen($name) > 2 && $name !== ACTIVE_THEME) {
+        $chkName = toCamelCase($name);
+        if (! $id && mb_strlen($name) > 2 && $chkName !== ACTIVE_THEME) {
             $active = false;
             if (!$data['title']) $data['title'] = $data['name'];
-            $data['name'] = $name;
+            $data['name'] = $chkName;
             if (! $this->model->getCount()) { 
                 $data['active'] = (int) 1; 
                 $active = true;
             }
             if ($id = $this->model->insert($data)) {
-                if ($active) { $this->model->setActiveConstant($name); }
+                if ($active) { $this->model->setActiveConstant($chkName); }
                 helper('files');
-                createPath(FCPATH . castingPath(PATH_THEME, true) . DIRECTORY_SEPARATOR . $name);
+                createPath(FCPATH . castingPath(PATH_THEME, true) . DIRECTORY_SEPARATOR . $chkName);
                 return $this->successfulResponse($id);
             }
         }
