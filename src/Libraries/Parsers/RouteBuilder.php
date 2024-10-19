@@ -21,7 +21,7 @@ class RouteBuilder
 
     public array $finderControls = [];
 
-    private string $code = '';
+    // private string $code = '';
 
     private string $url;
 
@@ -37,12 +37,12 @@ class RouteBuilder
      * @param string[] $namespaces namespaces to search
      */
     public function __construct(string $url = '/', array $methods = ['get'], array $options = [], bool $isGroup = false) {
-        $this->isGroup = $isGroup;
+        //$this->isGroup = $isGroup;
         $this->options = $options;
         $this->url = toUrl($url);
         $this->validateMethods($methods);
-        $this->class = '';
-        $this->groupClass = '';
+        //$this->class = '';
+        //$this->groupClass = '';
         $this->code = '';
         // if (file_exists($this->routesFile)) {
         //     $this->code = file_get_contents($this->routesFile);

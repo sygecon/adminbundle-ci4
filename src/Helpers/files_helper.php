@@ -7,8 +7,7 @@ if (! function_exists('createPath')) {
         $dir = castingPath($path);
         if (is_dir($dir) === true) return true;
         try {
-            mkdir($dir, 0755, true);
-            return is_dir($dir);
+            return mkdir($dir, 0755, true);
         } catch (\Throwable $th) {
             return false;
         }
@@ -47,29 +46,19 @@ if (! function_exists('deletePath')) {
                 \RecursiveDirectoryIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST
             ) as $fileInfo) 
         {
-            $origin = $fileInfo->getPathname();
-            if (is_link($origin)) {
-                if (!(unlink($origin) || '\\' !== \DIRECTORY_SEPARATOR || rmdir($origin)) && file_exists($origin)) {
+            $pathname = $fileInfo->getPathname();
+            if (is_link($pathname)) {
+                if (!(unlink($pathname) || '\\' !== \DIRECTORY_SEPARATOR || rmdir($pathname)) && file_exists($pathname)) {
                     return false;
                 }
             } else
             if ($fileInfo->isDir()) {
-                $folders[] = $origin;
+                $folders[] = $pathname;
             } else {
-                unlink($origin);
+                if (true === file_exists($pathname)) unlink($pathname);
             }
         }
-
-        if ($folders) {
-            usort($folders, function($a, $b) { 
-                $na = substr_count($a, DIRECTORY_SEPARATOR);
-                $nb = substr_count($b, DIRECTORY_SEPARATOR);
-                if ($na === $nb) return $a < $b;
-                return $na < $nb;
-            });
-            foreach($folders as $pathName) { rmdir($pathName); }
-        }
-        
+        foreach($folders as $pathname) { rmdir($pathname); }
         if ($startDelete === true && is_dir($dir) === true) return rmdir($dir);
         return true;
     }
@@ -77,10 +66,10 @@ if (! function_exists('deletePath')) {
 
 // Удаление файла  -------------------------------------------
 if (! function_exists('deleteFile')) {
-    function deleteFile(string $fileName): bool 
+    function deleteFile(string $filename): bool 
     {
-        $file = castingPath($fileName);
-        if (file_exists($file) === true) { return unlink($file); }
+        $file = castingPath($filename);
+        if (true === file_exists($file)) return unlink($file);
         return false;
     }
 }
@@ -92,13 +81,14 @@ if (! function_exists('renameFile')) {
         if (! $dst = castingPath($newName)) return '';
         $src = castingPath($path) . DIRECTORY_SEPARATOR . castingPath($oldName, true);
 
-        if (is_file($src) === true) {
+        if (true === is_file($src)) {
             $dst .= '.' . pathinfo($oldName, PATHINFO_EXTENSION);
-        } else if (is_dir($src) === false) { return ''; } 
+        } else 
+        if (false === is_dir($src)) return '';
 
         $dst = dirname($src) . DIRECTORY_SEPARATOR . $dst;
         if ($src === $dst) return '';
-        if (file_exists($dst) === true) return '';
+        if (true === file_exists($dst)) return '';
 
         if (rename($src, $dst) === false) return '';
         return $newName;
@@ -111,12 +101,12 @@ if (! function_exists('copyFile')) {
     {
         $dir = castingPath($dstPath);
         $src = castingPath($srcFile);
-        if (is_file($src) === false) return false;
-        if (is_dir($dir) === false) { 
-            if (mkdir($dir, 0755, true) === false) return false;
+        if (false === file_exists($src)) return false;
+        if (false === is_dir($dir)) { 
+            if (! mkdir($dir, 0755, true)) return false;
         }
-        $file = $dir . DIRECTORY_SEPARATOR . basename($src);
-        return ($move ? rename($src, $file) : copy($src, $file));
+        $filename = $dir . DIRECTORY_SEPARATOR . basename($src);
+        return (true === $move ? rename($src, $filename) : copy($src, $filename));
     }
 }
 
@@ -126,23 +116,26 @@ if (! function_exists('copyPath')) {
     {
         $src = castingPath($srcPath);
         $dst = castingPath($dstPath);
-        $originDirLen = strlen($src);
         if (is_dir($src) === false) return false;
         if (createPath($dst) === false) return false;
-        
-        $iterator = new \RecursiveIteratorIterator(
+
+        $dirLength  = strlen($src);
+        $iterator   = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($src, \RecursiveDirectoryIterator::SKIP_DOTS),
             \RecursiveIteratorIterator::SELF_FIRST
         );
-
-        foreach ($iterator as $file) {
-            $origin = $file->getPathname();
-            $target = $dst.substr($origin, $originDirLen);
-            // $dir = $dst . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
-            if ($file->isDir()) {
-                if (is_dir($target) === false) mkdir($target, 0755, true);
+        foreach ($iterator as $fileInfo) {
+            $origin = $fileInfo->getPathname();
+            $target = $dst . substr($origin, $dirLength);
+            // $target = $dst . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
+            if ($fileInfo->isDir()) {
+                if (false === is_dir($target)) mkdir($target, 0755, true);
             } else {
-                if ($move === true) rename($origin, $target); else copy($origin, $target);
+                if (true === $move) {
+                    rename($origin, $target);
+                } else {
+                    copy($origin, $target);
+                }
                 if (is_file($target) === true) {
                     chmod($target, fileperms($target) | (fileperms($origin) & 0111));
                     touch($target, filemtime($origin));
@@ -168,20 +161,20 @@ if (! function_exists('pathToZip')) {
         if (! is_dir($folderDst)) { 
             if (! mkdir($folderDst, 0755, true)) return false;
         }
-        
-        $zip = new \ZipArchive();
+
+        if (! $zip = new \ZipArchive()) return false;
         $zip->open($folderDst . DIRECTORY_SEPARATOR . $dirName . '.zip', \ZipArchive::CREATE);
         $zip->addEmptyDir($dirName);
-        if (! $zip) { return false; }
+        
         try {
             $iterator = new \RecursiveIteratorIterator(
                 new \RecursiveDirectoryIterator($folderSrc, \RecursiveDirectoryIterator::SKIP_DOTS),
                 \RecursiveIteratorIterator::SELF_FIRST
             );
-            foreach ($iterator as $file) {
+            foreach ($iterator as $fileInfo) {
                 $filePath = $folderSrc . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
                 $localPath = substr($filePath, $exclusiveLength);
-                if ($file->isDir()) {
+                if ($fileInfo->isDir()) {
                     $zip->addEmptyDir($localPath);
                 } else {
                     $zip->addFile($filePath, $localPath);

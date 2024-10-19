@@ -1,4 +1,5 @@
-<?php namespace Sygecon\AdminBundle\Database\Migrations;
+<?php 
+namespace Sygecon\AdminBundle\Database\Migrations;
 
 use CodeIgniter\Database\Forge;
 use CodeIgniter\Database\Migration;
@@ -6,30 +7,26 @@ use Config\Auth;
 
 class MigrationUsersData extends Migration
 {
-	protected $DBGroup = null;
-
 	private array $tables;
+
+    private array $attributes;
 
     public function __construct(?Forge $forge = null)
     {
+        /** @var Auth $authConfig */
+        $authConfig = new Auth();
+        if ($authConfig->DBGroup !== null) {
+            $this->DBGroup = $authConfig->DBGroup;
+        }
+
         parent::__construct($forge);
 
-        $authConfig     = new Auth();
-		$this->tables   = $authConfig->tables;
-        $this->DBGroup  = $authConfig->DBGroup;
+        $this->tables     = $authConfig->tables;
+        $this->attributes = ($this->db->getPlatform() === 'MySQLi') ? ['ENGINE' => 'InnoDB'] : [];
     }
 
 	public function up()
     {	
-		$fields = [
-			'lang_id'  		=> ['type' => 'SMALLINT', 'constraint' => 3, 'default' => 1, 'unsigned' => true, 'after' => 'id'],
-			'phone'	    	=> ['type' => 'VARCHAR', 'constraint' => 24, 'default' => '', 'after' => 'lang_id'],
-			'firstname' 	=> ['type' => 'VARCHAR', 'constraint' => 96, 'default' => '', 'after' => 'username'],
-			'lastname' 		=> ['type' => 'VARCHAR', 'constraint' => 96, 'default' => '', 'after' => 'firstname'],
-			'patronymic' 	=> ['type' => 'VARCHAR', 'constraint' => 96, 'default' => '', 'after' => 'lastname'],
-		];
-        $this->forge->addColumn($this->tables['users'], $fields);
-		
 		/**
 		 **********************************************************************
 		 * User details
@@ -42,7 +39,17 @@ class MigrationUsersData extends Migration
 		$this->forge->addKey('user_id', true);
 		$this->forge->addKey('relatеd');
 		$this->forge->addForeignKey('user_id', $this->tables['users'], 'id', 'CASCADE', 'CASCADE');
-		$this->forge->createTable('user_details', true);
+
+		$this->createTable('user_details');
+		
+		$fields = [
+			'lang_id'  		=> ['type' => 'SMALLINT', 'constraint' => 3, 'default' => 1, 'unsigned' => true, 'after' => 'id'],
+			'phone'	    	=> ['type' => 'VARCHAR', 'constraint' => 24, 'default' => '', 'after' => 'lang_id'],
+			'firstname' 	=> ['type' => 'VARCHAR', 'constraint' => 96, 'default' => '', 'after' => 'username'],
+			'lastname' 		=> ['type' => 'VARCHAR', 'constraint' => 96, 'default' => '', 'after' => 'firstname'],
+			'patronymic' 	=> ['type' => 'VARCHAR', 'constraint' => 96, 'default' => '', 'after' => 'lastname'],
+		];
+        $this->forge->addColumn($this->tables['users'], $fields);
 	}
 
 	public function down()
@@ -59,5 +66,10 @@ class MigrationUsersData extends Migration
 		
 		$this->db->enableForeignKeyChecks();
 	}
+
+	private function createTable(string $tableName): void
+    {
+        $this->forge->createTable($tableName, false, $this->attributes);
+    }
 
 }

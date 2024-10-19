@@ -15,7 +15,7 @@ final class Pages extends AdminController
         ignore_user_abort(true);
         set_time_limit(0);
         $this->model = new BaseModel();
-        $this->lang = $this->locale;
+        $this->lang  = $this->locale;
     }
 
     public function index($lang = APP_DEFAULT_LOCALE, $parentId = 0, $parent = 0): string

@@ -15,7 +15,16 @@ use Locale;
 
 abstract class AdminController extends Controller 
 {
-	protected const VALID_HASH = '19ceb94e';
+	protected const VALID_HASH 		= '25011f03';
+
+	protected const PREVIOUS_URI_ID = '_ci_asp_direct_previous_uri';
+	protected const CURRENT_URI_ID  = '_ci_asp_direct_current_uri';
+	protected const NOT_KEEP_URI  	= [
+		'register'          => 1, 'login'             => 1,
+        'logout'            => 1, 'force_reset'       => 1,
+        'permission_denied' => 1, 'group_denied'      => 1,
+		'user/change-password' => 1, 'user/set-password' => 1, 'user/password-reset' => 1
+	];
 
 	protected $locale = APP_DEFAULT_LOCALE;
 
@@ -27,16 +36,17 @@ abstract class AdminController extends Controller
 
 		$this->session = Services::session();
 		if (! $user = auth()->user()) { throw PageNotFoundException::forPageNotFound(); }
-
+		
 		$this->setLocale($user); 
 		$this->genHash();
+		$this->keeperLinks();
 		Locale::setDefault($this->locale);
 	}
 
 	/** * Destructor */
     public function __destruct() 
     {
-        $this->session->close();
+        if (isset($this->session)) $this->session->close();
     }
 
 	protected function setLocale(User $user): void
@@ -132,8 +142,34 @@ abstract class AdminController extends Controller
 
 	protected function genLinkHome(string $text): string
 	{
-		return '<a href="' . $this->request->getServer('HTTP_REFERER') . 
+		if (isset($_SESSION[self::PREVIOUS_URI_ID])) {
+			$previusUri = '/' . $_SESSION[self::PREVIOUS_URI_ID];
+		} else {
+			$previusUri = $this->request->getServer('HTTP_REFERER', FILTER_SANITIZE_URL);
+		}
+		
+		return '<a href="' . $previusUri . 
 			'" class="btn btn-outline-secondary" asp-lazy="chevron-double-left" title="' . 
 			lang('Admin.goBack') . '"></a><span class="h5">' . $text . '</span>';
+	}
+
+	protected function keeperLinks(): void
+	{
+		$currentUri = strtolower(ltrim($this->request->getServer('REQUEST_URI', FILTER_SANITIZE_URL), '/'));
+		if (true === isset(self::NOT_KEEP_URI[$currentUri])) return;
+		if ($pos = strpos($currentUri, '/')) {
+			$path = substr($currentUri, 0, $pos);
+			if ($path === 'api' || $path === 'error' || $path === 'http:' || $path === 'https:' || $path === 'file:' || $path === 'ftp:') return;
+			if ($path === 'index' || $path === 'php' || $path === 'index.php' || $path === 'index.html') {
+				$currentUri = substr($path, ++$pos);
+			}
+		}
+		if (true === isset($_SESSION[self::CURRENT_URI_ID])) {
+			$previusUri = $_SESSION[self::CURRENT_URI_ID];
+			if ($previusUri === $currentUri) return;
+
+			$_SESSION[self::PREVIOUS_URI_ID] = $previusUri;
+		} 
+		$_SESSION[self::CURRENT_URI_ID] = $currentUri;
 	}
 }

@@ -6,16 +6,16 @@ use Sygecon\AdminBundle\Controllers\AdminController;
 final class AspNav extends AdminController 
 {
     private const VALID_KEY     = 'permission';
-    private const CACHE_PREFIX  = 'Admin_apiNavAdmin_';
+    // private const CACHE_PREFIX  = 'Admin_apiNavAdmin_';
     private const PATH_NAV      = 'control' . DIRECTORY_SEPARATOR . 'nav' . DIRECTORY_SEPARATOR;
 
     public function me_admin(string $slug = 'menu'): string 
     {
         if (! $user = auth()->user()) return $this->successfulResponse('[]');
-        if (! $groups = $user->getGroups()) return $this->successfulResponse('[]');
-        $group = $groups[0];
-        $csh = self::CACHE_PREFIX . $slug . '_' . $group;
-        if ($data = cache($csh)) return $data;
+        // if (! $groups = $user->getGroups()) return $this->successfulResponse('[]');
+        // $group = $groups[0];
+        // $csh = self::CACHE_PREFIX . $slug . '_' . $group;
+        // if ($data = cache($csh)) return $data;
 
         helper('path');
         if (! $data = getDataFromJson(self::PATH_NAV . $slug)) return $this->successfulResponse('[]');
@@ -39,7 +39,7 @@ final class AspNav extends AdminController
             $data = '[' . mb_substr($data, 0, -1) . ']';
             unset($items);
         }
-        cache()->save($csh, $data, 600);
+        // cache()->save($csh, $data, 600);
         return $this->successfulResponse($data);
     }
 

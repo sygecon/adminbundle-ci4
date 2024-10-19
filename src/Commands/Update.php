@@ -5,6 +5,7 @@ namespace Sygecon\AdminBundle\Commands;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 // use CodeIgniter\I18n\Time;
+use Config\Boot\Update as Config;
 use App\Libraries\Loader\Githab;
 use Sygecon\AdminBundle\Libraries\LibraryLoader;
 use Throwable;
@@ -33,9 +34,12 @@ class Update extends BaseCommand
             CLI::write('Preparing processes ...');
             if ($isGit === true) {
                 $gitHab = new Githab();
-                if ($result = $gitHab->make(true)) {
+                $libraries = $gitHab->make();
+                CLI::write('The libraries were downloaded from the GitHub cloud platform.');
+
+                if ($libraries) {
                     $loader = new LibraryLoader();
-                    $loader->build($result);
+                    $loader->build($libraries);
                 }
                 return;
             }

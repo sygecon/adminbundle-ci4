@@ -252,12 +252,15 @@ final class Form
         $html = $this->labelWrap();
         $value = (isset($el['value']) ? $el['value'] : '');
         $opt = '';
+        $option = (isset($el['options']) ? $el['options'] : '');
 
-        if ($option = ($el['options'] ?? '')) {
+        if ($option) {
             if (is_array($option)) { 
                 $attr = $option; 
-            } else if (is_string($option)) { 
+            } else 
+            if (is_string($option)) { 
                 $attr = Component::executeAsFunction($option); 
+                unset($el['options']);
             }
 
             if(isset($attr) && is_array($attr)) {

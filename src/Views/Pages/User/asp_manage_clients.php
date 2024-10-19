@@ -66,6 +66,5 @@
 
 <!-- Section content -->
 <?= $this->section('scripts') ?>
-    <!-- <script src="/control/assets/js/treemodal.929de26f0edf9a6e31e5.js"></script> -->
     <script defer src="/assets/js/components/asp.query.post.js"></script>
 <?= $this->endSection() ?>
