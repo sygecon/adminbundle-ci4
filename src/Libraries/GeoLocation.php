@@ -19,8 +19,8 @@ class GeoLocation {
 		$res['ip'] = Services::request()->getIPAddress();
 		$mear = $this->getCurl ('//ip-api.com/json/' . (string) $res['ip'] . '?lang=ru');
 		if (isset($mear->lat) && $mear->lat && isset($mear->lon) && $mear->lon) {
-			$res['lat'] = round((float) $mear->lat,7);
-			$res['lon'] = round((float) $mear->lon,7);
+			$res['lat'] = round((float) $mear->lat, 7);
+			$res['lon'] = round((float) $mear->lon, 7);
 			$res['timezone'] = (string) $mear->timezone;
 			$res['country'] = (string) $mear->country;
 			$res['countryCode'] = (string) $mear->countryCode;
@@ -30,8 +30,8 @@ class GeoLocation {
 			$res['zip'] = (string) $mear->zip;
 			$res['isp'] = (string) $mear->isp;
 		}
-		if (isset($res['lat']) && $res['lat'] && isset($res['lon']) && $res['lon'])
-			$res['distance'] = $this->getDistanceFromLatLonInKm ($this->meLat, $this->meLon, $res['lat'], $res['lon']);        
+		if (isset($res['lat']) && isset($res['lon']) && $res['lat'] && $res['lon'])
+			$res['distance'] = $this->getDistanceFromLatLonInKm ($this->centerLat, $this->centerLon, $res['lat'], $res['lon']);        
 		return json_encode($res);
 	} 
  

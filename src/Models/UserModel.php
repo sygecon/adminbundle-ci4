@@ -438,7 +438,7 @@ final class UserModel
             ->join($this->tables['groups_users'], $this->tables['groups_users'] . '.user_id = ' . $this->tables['users'] . '.id');
     }
 
-    private function getUserData(int $userId, string $col, string $resultDefault): string
+    private function getUserData(int $userId, string $col, string $resultDefault): ?string
     {
         if (! $userId) return $resultDefault;
         try {

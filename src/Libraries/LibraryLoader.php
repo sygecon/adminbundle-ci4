@@ -17,7 +17,7 @@ final class LibraryLoader
 {
     private $editor = null;
 
-    public function __construct()
+    public function __construct(?string $param = null)
     {
         $config = new App();
         try {
@@ -27,7 +27,11 @@ final class LibraryLoader
         }
         helper(['path', 'files', 'match']);
 
-        $this->editor   = new Compare();
+        $this->editor = new Compare();
+
+        if ($param === 'framework') {
+            $this->frameworkUpdate(true); 
+        }
     }
 
     public function build(array $data = []): void
